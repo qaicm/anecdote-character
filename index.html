@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anecdote to Character</title>
+<meta name="description" content="Turn anecdotal records into character descriptions and character reports.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<section class="login" id="v-login" hidden>
+  <form class="card" id="loginForm" autocomplete="on">
+    <div class="brand"><span class="logo">AC</span>Anecdote to Character</div>
+    <h1>Sign in</h1>
+    <p class="hint">Use the account provided by your school administrator.</p>
+    <div><label for="lEmail">Email</label><input id="lEmail" type="text" autocomplete="username" required></div>
+    <div><label for="lPass">Password</label><input id="lPass" type="password" autocomplete="current-password" required></div>
+    <p class="err" id="lErr" role="alert"></p>
+    <button class="btn" type="submit" id="lBtn">Sign in</button>
+  </form>
+</section>
+
+<!-- ================= APP ================= -->
+<div class="wrap" id="v-app" hidden>
+  <div class="topbar">
+    <div class="brand"><span class="logo">AC</span>Anecdote to Character</div>
+    <div class="userbox">
+      <span class="sync" id="sync">Ready</span>
+      <span class="who" id="who"></span>
+      <button class="linkbtn" id="btnPass" hidden>Change password</button>
+      <button class="linkbtn" id="btnOut" hidden>Sign out</button>
+    </div>
+  </div>
+  <div class="banner" id="demoBanner" hidden><b>Demo mode.</b> The server address has not been set in <code>js/config.js</code>, so all data is stored in this browser only. See the installation guide to connect Google Sheets.</div>
+
+  <header style="margin-top:20px">
+    <h1>From <span class="mark">anecdotal records</span> to character reports</h1>
+    <p class="lead">Select a student, record what you see and hear, describe the student's strengths, areas for development and recommendations, and download a finished character report.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Steps">
+    <button class="tab" role="tab" data-tab="contoh"><span class="n">i</span>Examples</button>
+    <button class="tab" role="tab" data-tab="catat"><span class="n">1</span>Anecdotal records</button>
+    <button class="tab" role="tab" data-tab="desk"><span class="n">2</span>Character description</button>
+    <button class="tab" role="tab" data-tab="rapor"><span class="n">3</span>Character report</button>
+    <button class="tab" role="tab" data-tab="admin" id="tabAdmin" hidden><span class="n">A</span>Teachers</button>
+  </nav>
+
+  <!-- EXAMPLES -->
+  <section class="panel" id="p-contoh" role="tabpanel" hidden>
+    <div class="steps">
+      <div class="step"><span class="k">Step 1</span><b>Choose one student</b><span class="hint">A student you would like to understand more deeply.</span></div>
+      <div class="step"><span class="k">Step 1</span><b>Write anecdotal records</b><span class="hint">Date, time, location, what happened and how it ended, tagged with one sub-value. At least three records.</span></div>
+      <div class="step"><span class="k">Step 2</span><b>Describe the character</b><span class="hint">Strengths, areas for development and recommendations, each supported by a record.</span></div>
+      <div class="step"><span class="k">Step 3</span><b>Produce the report</b><span class="hint">Grades for the five values, Social and Spiritual narratives, a quality check, and PDF or Word download.</span></div>
+    </div>
+    <div class="exnav" id="exnav"></div>
+    <div class="grid3">
+      <div class="box" style="display:grid;gap:12px;align-content:start">
+        <div class="row between"><h2>Records</h2><span class="arrow">Step 1</span></div>
+        <div class="notes" id="exnotes" style="grid-template-columns:minmax(0,1fr)"></div>
+      </div>
+      <div class="box" style="display:grid;gap:12px;align-content:start">
+        <div class="row between"><h2>Description</h2><span class="arrow">Step 2</span></div>
+        <div class="sheet" id="exsheet"></div>
+      </div>
+      <div class="box full" style="display:grid;gap:12px;align-content:start">
+        <div class="row between"><h2>Report</h2><span class="arrow">Step 3</span></div>
+        <div class="rscroll"><div id="exreport"></div></div>
+        <p class="gradenote">Grades are derived from the number of strengths and areas for development recorded under each value's sub-values.</p>
+      </div>
+    </div>
+    <div class="row"><button class="btn" data-go="catat">Start with my student →</button><button class="btn ghost" id="useEx">Add this example as a practice student</button></div>
+    <details class="fix">
+      <summary>Character framework: five values and their sub-values</summary>
+      <div class="in"><div class="fw" id="fw"></div></div>
+    </details>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="panel" id="p-catat" role="tabpanel" hidden>
+    <div class="box" style="display:grid;gap:14px">
+      <div class="stubar">
+        <div><label for="stuSel">Student</label><select id="stuSel"></select></div>
+        <div class="row" style="gap:8px"><button class="btn ghost small" id="stuNew">New student</button><button class="btn ghost small" id="stuEdit">Edit</button><button class="btn warn small" id="stuDel">Delete</button></div>
+      </div>
+      <p class="stuinfo" id="stuInfo"></p>
+      <form id="stuForm" hidden style="display:grid;gap:14px;border-top:1px solid var(--line);padding-top:14px">
+        <h3 id="stuFormTitle">New student</h3>
+        <div class="fields f4">
+          <div class="w2"><label for="sName">Student's full name</label><input id="sName" placeholder="e.g. Ahmad Fakhry" required></div>
+          <div><label for="sId">Student ID</label><input id="sId" placeholder="optional"></div>
+          <div><label for="sClass">Grade / class</label><input id="sClass" placeholder="e.g. 7A"></div>
+          <div><label for="sGender">Gender <span class="hint">for he / she</span></label><select id="sGender"><option value="">Select</option><option value="m">Male</option><option value="f">Female</option></select></div>
+          <div class="w2" id="sTeacherWrap" hidden><label for="sTeacher">Homeroom teacher</label><select id="sTeacher"></select></div>
+        </div>
+        <div class="row"><button class="btn" type="submit" id="stuSave">Save student</button><button class="btn ghost" type="button" id="stuCancel">Cancel</button><span class="hint" id="stuMsg"></span></div>
+      </form>
+    </div>
+
+    <div id="recordArea">
+      <div class="box">
+        <div class="row between" style="margin-bottom:12px"><h2>Add a record</h2><span class="hint">Record what you see and hear, not your judgement.</span></div>
+        <div class="fields">
+          <div><label for="nDate">Date</label><input id="nDate" type="date"></div>
+          <div><label for="nTime">Time / activity</label><input id="nTime" list="dlTime" placeholder="e.g. Snack time"></div>
+          <div><label for="nLoc">Location</label><input id="nLoc" list="dlLoc" placeholder="e.g. Classroom"></div>
+          <div class="wide"><label for="nWhat">What happened <span class="hint">the student's actions and words; quote them where possible</span></label><textarea id="nWhat" placeholder="While writing her name on the snack jobs chart for the next day, Mabel told Anna, “I start Mabel with a big M.”"></textarea></div>
+          <div class="wide"><label for="nEnd">How it ended</label><input id="nEnd" placeholder="e.g. She finished writing her name and pointed out the letter M to Anna."></div>
+          <div><label for="nAspect">Sub-value</label><select id="nAspect"></select></div>
+          <div class="w2" style="grid-column:span 2">
+            <span style="display:block;font-weight:700;font-size:.9rem;margin-bottom:4px">This record shows</span>
+            <div class="seg" role="radiogroup" aria-label="Type of evidence">
+              <input type="radio" name="nType" id="ty-k" value="k" checked><label for="ty-k" class="k">A strength</label>
+              <input type="radio" name="nType" id="ty-p" value="p"><label for="ty-p" class="p">An area for development</label>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;gap:10px;margin-top:14px">
+          <p class="hint" id="aspHint"></p>
+          <div class="anat" id="anat"></div>
+          <div class="alert" id="judge" hidden></div>
+          <div class="row"><button class="btn" id="addNote">Save record</button><span class="hint" id="addMsg"></span></div>
+        </div>
+      </div>
+
+      <div class="box" style="display:grid;gap:14px;margin-top:20px">
+        <div class="row between"><h2 id="notesTitle">Records</h2><span class="count" id="noteCount"></span></div>
+        <div class="notes" id="myNotes"></div>
+        <div class="row" style="justify-content:flex-end"><button class="btn" data-go="desk">Continue to character description →</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" id="p-desk" role="tabpanel" hidden>
+    <div class="grid2">
+      <div class="box" style="display:grid;gap:12px;align-content:start">
+        <div class="row between"><h2>Evidence from Step 1</h2><span class="count" id="evCount"></span></div>
+        <div class="row" style="gap:14px;font-size:.85rem"><span class="row" style="gap:6px"><span class="dot k" style="margin:0"></span>Strength</span><span class="row" style="gap:6px"><span class="dot p" style="margin:0"></span>Area for development</span></div>
+        <div class="ev" id="evList"></div>
+      </div>
+      <div class="box" style="display:grid;gap:14px;align-content:start">
+        <h2 id="deskTitle">Character description</h2>
+        <div class="row"><button class="btn" id="draft">Draft from records</button><span class="hint">Then revise it in your own words. Changes are saved automatically.</span></div>
+        <div><label for="dS">Strengths</label><textarea id="dS" rows="5"></textarea></div>
+        <div><label for="dW">Areas for development <span class="hint">weaknesses</span></label><textarea id="dW" rows="5"></textarea></div>
+        <div><label for="dG">Recommendations <span class="hint">for teachers and parents</span></label><textarea id="dG" rows="6"></textarea></div>
+        <div class="alert" id="deskWarn" hidden></div>
+      </div>
+    </div>
+    <div class="row between"><button class="btn ghost" data-go="catat">← Back to records</button><button class="btn" data-go="rapor">Continue to character report →</button></div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" id="p-rapor" role="tabpanel" hidden>
+    <div class="box">
+      <h2 style="margin-bottom:12px">Report details</h2>
+      <div class="fields f4">
+        <div><label for="rYear">Academic Year</label><input id="rYear"></div>
+        <div><label for="rSem">Semester</label><input id="rSem"></div>
+        <div><label for="rTerm">Term</label><input id="rTerm"></div>
+        <div><label for="rDate">Report date</label><input id="rDate" type="date"></div>
+        <div class="w2" style="grid-column:span 2"><label for="rPlace">Place</label><input id="rPlace"></div>
+        <div class="w2" style="grid-column:span 2"><label for="rTeacher">Homeroom teacher <span class="hint">printed under the signature</span></label><input id="rTeacher"></div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="box" style="display:grid;gap:14px;align-content:start">
+        <h2>Report narratives</h2>
+        <p class="hint">Narratives follow the pattern: strength, then <i>However</i> (area for development), then <i>Therefore</i> (recommendation). Faithful and Akhlaq-Adab records form the Spiritual narrative; Independence, Intelligence and Leadership records form the Social narrative.</p>
+        <div class="row"><button class="btn" id="narr">Draft narratives from records</button></div>
+        <div><label for="rSocial">Social</label><textarea id="rSocial" rows="7"></textarea></div>
+        <div><label for="rSpirit">Spiritual</label><textarea id="rSpirit" rows="7"></textarea></div>
+      </div>
+      <div class="box" style="display:grid;gap:12px;align-content:start">
+        <div class="row between"><h2>Suggested improvements</h2><span class="count" id="ckCount"></span></div>
+        <p class="hint">Checked automatically whenever the report changes.</p>
+        <div class="checks" id="checks"></div>
+      </div>
+    </div>
+
+    <div class="box" style="display:grid;gap:12px">
+      <div class="row between"><h2>Final report</h2>
+        <div class="dl">
+          <button class="btn" id="dlPdf">Download PDF</button>
+          <button class="btn" id="dlWord">Download Word</button>
+        </div>
+      </div>
+      <div class="row between">
+        <label class="check" for="dlAppendix"><input type="checkbox" id="dlAppendix"> Include the character description and anecdotal records as an appendix</label>
+        <div class="row" style="gap:8px"><button class="btn ghost small" id="copyTable">Copy for Docs / Sheets</button><button class="btn ghost small" id="copyRep">Copy as text</button></div>
+      </div>
+      <p class="hint">Select a grading cell to change it. Grey marks are suggested from the records; black marks have been set by you. Select a black mark again to return to the suggestion.</p>
+      <div class="rscroll"><div id="report"></div></div>
+      <h3 style="margin-top:6px">Basis for each grade</h3>
+      <div class="basis" id="gradeBasis"></div>
+    </div>
+
+    <details class="fix">
+      <summary>Template revision example: Ahmad Fakhry</summary>
+      <div class="in">
+        <p class="hint">The sample in the school template contains several errors that commonly occur when a narrative is copied from another student. Highlighted text needs revision.</p>
+        <ol class="issues">
+          <li><b>Inconsistent name.</b> The name appears as AHMAD, Akhmad and Akhmat, with a leftover placeholder <i>Fulanah</i>. Use one spelling that matches the student record.</li>
+          <li><b>Mixed pronouns.</b> The Social narrative uses <i>he/his</i>, while the Spiritual narrative uses <i>she/her</i>. A male student requires he/his/him throughout.</li>
+          <li><b>Spelling and grammar.</b> <i>Intellegence</i> → Intelligence; <i>almost completing in assignments</i> → completed almost all assignments; <i>due she needs</i> → as he needs.</li>
+          <li><b>Grades not explained.</b> Independence is graded <i>Need Improvement</i>, yet none of its sub-values (Responsibility, Risk-Taking, Self-confidence, Resilience, Self-Control) is discussed or followed by a recommendation. Self-control is mentioned only in the Spiritual paragraph.</li>
+          <li><b>Sub-values not named.</b> Linking statements to the sub-values (e.g. Problem-solving, Creative-Innovation, Care) shows parents exactly which part of the framework is being assessed.</li>
+          <li><b>No evidence.</b> No specific incident is described. One example from an anecdotal record makes the narrative more credible to parents.</li>
+          <li><b>Vague recommendation.</b> <i>Activities that promote imaginative thinking</i> should name activities that can be carried out immediately.</li>
+          <li><b>Inconsistent timing.</b> The report is dated 1 September, at the start of Semester 1, yet refers to <i>throughout the academic year</i>. Use <i>this term</i> instead.</li>
+        </ol>
+        <div class="ba">
+          <div class="col before"><span class="lab">Before · Social</span><p><mark>Akhmad</mark> Fakhry has been demonstrating responsibility <mark>throughout the academic year</mark>. He has been <mark>almost completing in assignments</mark> on time and has shown a keen awareness of his academic obligations. While <mark>Akhmad</mark> Fakhry has been a diligent student, he has been exhibiting a tendency to rely on conventional approaches to problem-solving. His creative thinking skills could be further developed. Therefore, he is encouraged to participate in <mark>activities that promote imaginative thinking</mark>.</p></div>
+          <div class="col after"><span class="lab">After · Social</span><p>Ahmad Fakhry has been demonstrating responsibility this term; he completed almost all assignments on time and is aware of his academic obligations. However, he still relies on familiar approaches to problem-solving, and his creative-innovative thinking can be developed further. He also needs frequent reminders to stay focused, which indicates that his self-control is still developing. Therefore, he is encouraged to take part in open-ended projects and brainstorming activities, and to use an agreed signal before speaking so that he can manage his impulses independently.</p></div>
+          <div class="col before"><span class="lab">Before · Spiritual</span><p>Masyaallah, <mark>Akhmat</mark> has continued to demonstrate <mark>her</mark> empathy. <mark>She</mark> manages <mark>her</mark> emotions appropriately and positively responds to <mark>her</mark> friends during free play. However, <mark>Fulanah</mark> is still developing <mark>her</mark> self-control <mark>due she needs</mark> to be reminded about staying focused and avoiding distraction. Therefore, raising <mark>her</mark> hands and focusing on class will improve <mark>her</mark> self-control.</p></div>
+          <div class="col after"><span class="lab">After · Spiritual</span><p>Masyaallah, Ahmad has continued to show genuine care for the feelings of his friends and responds to them courteously during free play. He performs his daily prayers consistently and expresses gratitude for the blessings he receives. To grow further, he is encouraged to lead the du'a in class occasionally so that he can become a role model in worship for his peers.</p></div>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ADMIN -->
+  <section class="panel" id="p-admin" role="tabpanel" hidden>
+    <div class="box" style="display:grid;gap:14px">
+      <h2>Add or update a teacher account</h2>
+      <form id="tForm" class="fields f4">
+        <div class="w2"><label for="tEmail">Email</label><input id="tEmail" type="text" inputmode="email" autocomplete="off" required placeholder="teacher@school.sch.id"></div>
+        <div class="w2"><label for="tName">Full name</label><input id="tName" required></div>
+        <div><label for="tRole">Role</label><select id="tRole"><option value="teacher">Teacher</option><option value="admin">Administrator</option></select></div>
+        <div><label for="tActive">Status</label><select id="tActive"><option value="true">Active</option><option value="false">Inactive</option></select></div>
+        <div class="w2" style="grid-column:span 2;align-self:end"><button class="btn" type="submit" id="tSave">Save account</button></div>
+      </form>
+      <div id="tSecret" hidden style="display:grid;gap:8px">
+        <p><b id="tSecretTitle">Temporary password</b> <span class="hint">Shown once only. Give it to the teacher; they must change it after signing in.</span></p>
+        <div class="secret" id="tSecretVal"></div>
+      </div>
+    </div>
+    <div class="box" style="display:grid;gap:12px">
+      <div class="row between"><h2>Teacher accounts</h2><span class="count" id="tCount"></span></div>
+      <div style="overflow-x:auto"><table class="tbl" id="tTable"></table></div>
+    </div>
+  </section>
+</div>
+
+<!-- CHANGE PASSWORD -->
+<div class="modal" id="mPass" hidden>
+  <form class="card" id="passForm">
+    <h2>Change password</h2>
+    <p class="hint" id="passHint">Use at least 8 characters, including letters and numbers.</p>
+    <div><label for="pOld">Current password</label><input id="pOld" type="password" autocomplete="current-password" required></div>
+    <div><label for="pNew">New password</label><input id="pNew" type="password" autocomplete="new-password" required></div>
+    <div><label for="pNew2">Confirm new password</label><input id="pNew2" type="password" autocomplete="new-password" required></div>
+    <p class="err" id="pErr" role="alert"></p>
+    <div class="row"><button class="btn" type="submit" id="pSave">Update password</button><button class="btn ghost" type="button" id="pCancel">Cancel</button></div>
+  </form>
+</div>
+
+<datalist id="dlTime"><option>Arrival</option><option>Circle time</option><option>Snack time</option><option>Congregational prayer</option><option>Lesson</option><option>Group work</option><option>Break time</option><option>Lunch</option><option>Dismissal</option></datalist>
+<datalist id="dlLoc"><option>Classroom</option><option>Prayer room</option><option>Playground</option><option>Library</option><option>Canteen</option><option>Laboratory</option><option>Sports field</option></datalist>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="js/config.js"></script>
+<script src="js/framework.js"></script>
+<script src="js/api.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
