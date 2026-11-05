@@ -215,3 +215,29 @@ img{max-width:100%}
 .spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:sp .8s linear infinite;vertical-align:-3px}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+/* ---------- student filters ---------- */
+.stufilters{display:grid;grid-template-columns:minmax(0,170px) minmax(0,150px) minmax(0,1fr);gap:12px;align-items:end}
+@media (max-width:640px){.stufilters{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.stufilters .grow{grid-column:1/-1}}
+.stufilters .count{font-weight:400;margin-left:6px}
+
+/* ---------- time / location combo ---------- */
+.combo-own{margin-top:8px}
+
+/* ---------- import ---------- */
+.imp{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:14px}
+.impsteps{display:grid;gap:10px}
+.impstep{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;font-size:.92rem}
+.impstep .k{width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-family:var(--f-mono);font-size:.8rem;display:grid;place-items:center}
+.impin{display:grid;gap:8px;margin-top:8px}
+.impin input[type=file]{background:transparent;border:1.5px dashed var(--line);padding:14px}
+.impwrap{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:8px}
+.imptbl{font-size:.86rem}
+.imptbl th{position:sticky;top:0;background:var(--paper)}
+.imptbl td.st{white-space:nowrap}
+.imptbl tr.bad td{background:var(--need-soft)}
+.st-new{color:var(--good);font-weight:700}.st-upd{color:var(--accent);font-weight:700}.st-bad{color:var(--need);font-weight:700}
+.st-warn{display:block;font-weight:400;color:var(--muted);font-size:.8rem}
+.impsum{display:flex;gap:8px;flex-wrap:wrap}
+.impsum .pill{font-size:.82rem;padding:4px 10px}
+.pill.upd{background:var(--accent-soft);color:var(--accent)}

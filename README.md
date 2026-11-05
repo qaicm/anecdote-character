@@ -4,9 +4,10 @@ A lightweight web app for teachers to turn anecdotal records into character desc
 
 **Workflow**
 
-1. **Anecdotal records** — date, time, location, what happened, how it ended, tagged with one sub-value as a strength or an area for development.
-2. **Character description** — strengths, areas for development and recommendations, drafted from the records.
-3. **Character report** — grades for the five values, Social and Spiritual narratives, an automatic quality check, and PDF or Word download.
+1. **Students** — add students one by one or import a class list from Excel/CSV, with class and unit (MS = Middle School, HS = High School); filter by unit and class.
+2. **Anecdotal records** — date, time, location, what happened, how it ended, tagged with one sub-value as a strength or an area for development.
+3. **Character description** — strengths, areas for development and recommendations, drafted from the records.
+4. **Character report** — grades for the five values, Social and Spiritual narratives, an automatic quality check, and PDF or Word download.
 
 **Architecture**
 

@@ -7,6 +7,8 @@ Aplikasi pencatatan anekdot siswa → deskripsi karakter → rapor karakter (und
 
 Perkiraan waktu: 30–45 menit untuk pertama kali.
 
+> **Sudah memasang versi 1.0?** Langsung ke **bagian 5A — Memperbarui ke versi 1.1** (impor siswa, unit MS/HS, pilihan Time/Location). Data yang sudah ada tetap aman.
+
 ---
 
 ## 0. Isi paket
@@ -90,6 +92,7 @@ Setup otomatis membuat:
        ├── framework.js
        ├── api.js
        ├── export.js
+       ├── importer.js
        └── app.js
    ```
 2. Buka `js/config.js` dengan Notepad / VS Code, lalu isi:
@@ -170,11 +173,46 @@ Tunggu 1–2 menit → muncul *"Your site is live at https://USERNAME.github.io/
 3. Buka tab **Teachers** → tambahkan akun guru (email, nama, peran). Aplikasi menampilkan **kata sandi sementara** satu kali → berikan ke guru yang bersangkutan.
 4. Guru login → wajib mengganti kata sandi → mulai menambah siswa dan catatan.
 
+**Mengisi daftar siswa sekaligus (impor):**
+1. Tab **Anecdotal records** → klik **Import students** → **Download Excel template**.
+2. Isi satu siswa per baris: Student ID, Student Name, Grade / Class, Unit (MS/HS), Gender (M/F). Admin juga punya kolom **Teacher Email** untuk menentukan wali kelas tiap siswa.
+3. Unggah berkasnya (.xlsx, .xls, atau .csv), atau salin baris dari Excel/Google Sheets (termasuk baris judul) lalu tempel di kotak yang tersedia.
+4. Periksa pratinjau: **New** = siswa baru, **Update** = siswa yang sudah ada akan diperbarui, **Skipped** = baris bermasalah beserta alasannya.
+5. Klik **Import N students**.
+
+Catatan impor:
+- Maksimal 500 siswa per impor. Daftar yang lebih besar bisa dipecah menjadi beberapa berkas.
+- Siswa dicocokkan lewat **Student ID**, atau lewat **nama + kelas** bila ID kosong, jadi mengimpor ulang berkas yang sama tidak membuat data ganda.
+- Bila kolom Unit kosong, unit ditebak dari kelas: 7–9 → **MS**, 10–12 → **HS** (angka Romawi VII–XII juga dikenali).
+- Judul kolom berbahasa Indonesia juga dikenali, misalnya NIS, Nama Siswa, Kelas, Jenjang (SMP/SMA), dan JK (L/P).
+- Guru hanya bisa mengimpor ke daftar siswanya sendiri. Admin bisa membagi siswa ke guru lain lewat kolom Teacher Email atau pilihan **Assign to teacher**.
+
+Setelah ada banyak siswa, gunakan filter **Unit** dan **Class** di atas pilihan siswa.
+
+**Time dan Location:** pilih dari daftar, atau pilih **Other (type your own)…** untuk menulis sendiri. Isian sendiri diingat di perangkat itu dan muncul di bagian **Your entries**.
+
 Hak akses:
 - **Teacher:** hanya melihat dan mengubah siswa miliknya sendiri.
 - **Administrator:** melihat semua siswa, memindahkan siswa ke guru lain, mengelola akun guru, me-reset kata sandi.
 
 ---
+
+## 5A. Memperbarui ke versi 1.1
+
+Versi 1.1 menambahkan impor siswa, kolom Unit (MS/HS), filter Unit/Class, dan isian sendiri untuk Time/Location.
+
+1. **Backend:** buka proyek Apps Script → `Kode.gs` → hapus semua isinya → tempel `Kode.gs` versi baru → **Ctrl+S**.
+2. **Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy.** URL `/exec` tetap sama.
+3. **Frontend:** ekstrak ZIP baru, lalu salin isinya ke folder `anecdote-character` milik Anda **kecuali `js/config.js`** (supaya URL server Anda tidak tertimpa). Berkas baru di versi ini: `js/importer.js`.
+4. Dari folder `anecdote-character`:
+   ```bash
+   git add .
+   git commit -m "Versi 1.1: impor siswa dan unit"
+   git push
+   ```
+5. Buka situs dengan **Ctrl+Shift+R**.
+
+Database lama tidak perlu diubah manual. Kolom `unit` ditambahkan otomatis di sheet `Students` saat aplikasi pertama kali dipakai. Untuk mengisi unit siswa lama, impor ulang daftar siswa dengan Student ID yang sama, atau ubah satu per satu lewat **Edit**.
 
 ## 5. Memperbarui aplikasi
 
@@ -223,7 +261,7 @@ Aturan penting:
 | Sheet | Kolom |
 |---|---|
 | `Teachers` | email, name, role, active, createdAt, updatedAt |
-| `Students` | id, studentId, name, grade, gender, teacherEmail, createdAt, updatedAt |
+| `Students` | id, studentId, name, grade, gender, teacherEmail, createdAt, updatedAt, unit (MS / HS) |
 | `Records` | id, studentKey, date, time, location, what, ending, subValue, value, type (k = strength, p = area for development), teacherEmail, createdAt |
 | `Reports` | studentKey, academicYear, semester, term, place, reportDate, grades (JSON), social, spiritual, strengths, weaknesses, recommendations, updatedAt, updatedBy |
 | `AuditLog` | timestamp, email, action, entity, detail |
@@ -248,3 +286,7 @@ Sheet ini bisa dipakai untuk rekap (filter, pivot) tanpa mengubah aplikasi. Hind
 | Situs masih versi lama | Cache browser | Ctrl+Shift+R atau jendela Incognito |
 | Lupa kata sandi guru | — | Admin → tab Teachers → **Reset password** |
 | Lupa kata sandi admin | — | Jalankan `resetAdminPassword()` di Apps Script |
+| Tombol **Import students** tidak muncul | Frontend belum diperbarui atau cache browser | Pastikan `js/importer.js` ikut di-push, lalu Ctrl+Shift+R |
+| Impor gagal: "Unknown action: student.import" | Backend belum diperbarui ke 1.1 | Bagian 5A langkah 1–2 (New version) |
+| Student ID 00123 menjadi 123 | Kolom ID di Excel berformat angka | Pakai templat dari aplikasi (kolom ID sudah berformat teks), atau ketik `'00123` |
+| Berkas CSV terbaca satu kolom | Pemisah kolom tidak umum | Aplikasi mengenali koma, titik koma, dan tab. Bila masih gagal, simpan sebagai .xlsx |

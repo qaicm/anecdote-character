@@ -115,25 +115,44 @@ $("fw").innerHTML = VALUES.map(v => `<div class="fwv"><h3>${v.full}<small>${v.ar
 
 /* ---------- step 1: students ---------- */
 function teacherName(email) { const t = S.teachers.find(x => x.email === email); return t ? t.name : email; }
+const unitOf = st => st.unit || "";
+function filteredStudents() {
+  const fu = $("fUnit").value, fc = $("fClass").value;
+  return S.students.filter(s => (!fu || (fu === "-" ? !unitOf(s) : unitOf(s) === fu)) && (!fc || s.grade === fc));
+}
+function renderClassFilter() {
+  const fu = $("fUnit").value, cur = $("fClass").value || pref.get("f-class", "");
+  const classes = uniq(S.students.filter(s => !fu || (fu === "-" ? !unitOf(s) : unitOf(s) === fu)).map(s => s.grade).filter(Boolean)).sort(byClass);
+  $("fClass").innerHTML = `<option value="">All classes</option>` + classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  $("fClass").value = classes.includes(cur) ? cur : "";
+}
 function renderStudents() {
   const isAdmin = S.me && S.me.role === "admin";
-  const list = S.students.slice().sort((a, b) => String(a.grade).localeCompare(String(b.grade)) || String(a.name).localeCompare(String(b.name)));
+  if (!$("fUnit").dataset.init) { $("fUnit").value = pref.get("f-unit", ""); $("fUnit").dataset.init = "1"; }
+  renderClassFilter();
+  const order = { MS: 1, HS: 2, "": 3 };
+  const list = filteredStudents().sort((a, b) => (order[unitOf(a)] - order[unitOf(b)]) || byClass(a.grade, b.grade) || String(a.name).localeCompare(String(b.name)));
+  $("stuCount").textContent = S.students.length ? (list.length === S.students.length ? `${list.length}` : `${list.length} of ${S.students.length}`) : "";
   $("stuSel").innerHTML = list.length
-    ? list.map(s => `<option value="${esc(s.id)}">${esc(s.name)}${s.grade ? " · " + esc(s.grade) : ""}${isAdmin ? " · " + esc(teacherName(s.teacherEmail)) : ""}</option>`).join("")
-    : `<option value="">No students yet</option>`;
-  if (!curStudent()) S.cur = list[0] ? list[0].id : "";
+    ? list.map(s => `<option value="${esc(s.id)}">${esc(s.name)}${s.grade ? " · " + esc(s.grade) : ""}${unitOf(s) ? " · " + unitOf(s) : ""}${isAdmin ? " · " + esc(teacherName(s.teacherEmail)) : ""}</option>`).join("")
+    : `<option value="">${S.students.length ? "No students match the filter" : "No students yet"}</option>`;
+  if (!list.some(s => s.id === S.cur)) S.cur = list[0] ? list[0].id : "";
   $("stuSel").value = S.cur;
   const st = curStudent();
   $("stuEdit").disabled = $("stuDel").disabled = !st;
-  $("stuInfo").textContent = st ? [st.studentId && "ID " + st.studentId, st.grade && "Grade " + st.grade, st.gender === "m" ? "Male" : st.gender === "f" ? "Female" : "Gender not set"].filter(Boolean).join(" · ") : "Add your first student to begin.";
+  $("stuInfo").textContent = st ? [st.studentId && "ID " + st.studentId, st.grade && "Class " + st.grade, unitOf(st) ? `${unitOf(st)} · ${UNITS[unitOf(st)]}` : "Unit not set", st.gender === "m" ? "Male" : st.gender === "f" ? "Female" : "Gender not set"].filter(Boolean).join(" · ")
+    : S.students.length ? "Change the filter to see more students." : "Add your first student, or import a class list from Excel.";
   $("recordArea").classList.toggle("locked", !st);
-  if (!list.length && $("stuForm").hidden) openStudentForm(null);
+  if (!S.students.length && $("stuForm").hidden && $("impPanel").hidden) openStudentForm(null);
 }
+$("fUnit").onchange = e => { pref.set("f-unit", e.target.value); $("fClass").value = ""; pref.set("f-class", ""); renderStep1(); };
+$("fClass").onchange = e => { pref.set("f-class", e.target.value); renderStep1(); };
 $("stuSel").onchange = e => { S.cur = e.target.value; pref.set("cur", S.cur); $("stuForm").hidden = true; renderStep1(); };
 function openStudentForm(st) {
   $("stuForm").hidden = false; $("stuMsg").textContent = "";
   $("stuFormTitle").textContent = st ? "Edit student" : "New student";
-  $("sName").value = st ? st.name : ""; $("sId").value = st ? st.studentId : ""; $("sClass").value = st ? st.grade : ""; $("sGender").value = st ? st.gender : "";
+  $("impPanel").hidden = true;
+  $("sName").value = st ? st.name : ""; $("sId").value = st ? st.studentId : ""; $("sClass").value = st ? st.grade : ""; $("sGender").value = st ? st.gender : ""; $("sUnit").value = st ? unitOf(st) : ($("fUnit").value === "MS" || $("fUnit").value === "HS" ? $("fUnit").value : "");
   const isAdmin = S.me && S.me.role === "admin";
   $("sTeacherWrap").hidden = !isAdmin;
   if (isAdmin) {
@@ -148,7 +167,7 @@ $("stuEdit").onclick = () => openStudentForm(curStudent());
 $("stuCancel").onclick = () => { $("stuForm").hidden = true; };
 $("stuForm").onsubmit = async e => {
   e.preventDefault();
-  const data = { id: $("stuForm").dataset.id || "", name: $("sName").value.trim(), studentId: $("sId").value.trim(), grade: $("sClass").value.trim(), gender: $("sGender").value };
+  const data = { id: $("stuForm").dataset.id || "", name: $("sName").value.trim(), studentId: $("sId").value.trim(), grade: $("sClass").value.trim(), gender: $("sGender").value, unit: $("sUnit").value };
   if (!data.name) { $("stuMsg").textContent = "Please enter the student's name."; return; }
   if (S.me && S.me.role === "admin") data.teacherEmail = $("sTeacher").value;
   busy($("stuSave"), true, "Saving…"); setSync("busy", "Saving");
@@ -158,6 +177,7 @@ $("stuForm").onsubmit = async e => {
   const i = S.students.findIndex(s => s.id === r.data.student.id);
   if (i > -1) S.students[i] = r.data.student; else S.students.push(r.data.student);
   S.cur = r.data.student.id; pref.set("cur", S.cur);
+  revealStudent(r.data.student);
   $("stuForm").hidden = true; setSync("ok", "Saved"); cacheNow(); toast(r.message || "Student saved"); renderStep1();
 };
 $("stuDel").onclick = () => {
@@ -172,6 +192,146 @@ $("stuDel").onclick = () => {
     S.cur = ""; setSync("ok", "Saved"); cacheNow(); toast("Student deleted"); renderStep1();
   });
 };
+
+/* keep a just-saved student visible under the current filters */
+function revealStudent(st) {
+  const fu = $("fUnit").value;
+  if (fu && (fu === "-" ? unitOf(st) : unitOf(st) !== fu)) { $("fUnit").value = ""; pref.set("f-unit", ""); }
+  if ($("fClass").value && $("fClass").value !== st.grade) { $("fClass").value = ""; pref.set("f-class", ""); }
+}
+
+/* ---------- step 1: import students ---------- */
+let IMP = [];
+const isAdminUser = () => S.me && S.me.role === "admin";
+function openImport() {
+  $("stuForm").hidden = true; $("impPanel").hidden = false;
+  $("impAdmin").hidden = $("impTplTeacher").hidden = !isAdminUser();
+  if (isAdminUser()) {
+    $("impTeacher").innerHTML = S.teachers.filter(t => t.active).map(t => `<option value="${esc(t.email)}">${esc(t.name)} (${esc(t.email)})</option>`).join("");
+    $("impTeacher").value = S.me.email;
+  }
+  resetImport(); $("impPanel").scrollIntoView({ block: "nearest" });
+}
+function resetImport() {
+  IMP = []; $("impFile").value = ""; $("impPaste").value = "";
+  ["impErr", "impSummary", "impWrap", "impResult"].forEach(id => $(id).hidden = true);
+  $("impGo").disabled = true; $("impGo").textContent = "Import"; $("impMsg").textContent = "";
+}
+$("impOpen").onclick = openImport;
+$("impClose").onclick = () => { $("impPanel").hidden = true; renderStep1(); };
+$("impTpl").onclick = async () => {
+  busy($("impTpl"), true, "Preparing…");
+  try { await Importer.template(isAdminUser()); toast("Template downloaded"); } catch (e) { toast(e.message); }
+  busy($("impTpl"), false);
+};
+function impError(msg) { $("impErr").textContent = msg; $("impErr").hidden = false; $("impWrap").hidden = $("impSummary").hidden = true; $("impGo").disabled = true; }
+function loadTable(table) {
+  $("impErr").hidden = true; $("impResult").hidden = true;
+  let parsed;
+  try { parsed = Importer.toRows(table); } catch (e) { return impError(e.message); }
+  if (!parsed.rows.length) return impError("The header row was found, but there are no student rows below it.");
+  if (parsed.rows.length > 500) return impError(`The file has ${parsed.rows.length} rows. Import at most 500 students at a time; split the list into several files.`);
+  IMP = parsed.rows; previewImport();
+}
+$("impFile").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $("impPaste").value = ""; $("impMsg").textContent = "Reading the file…";
+  try { loadTable(await Importer.readFile(f)); } catch (err) { impError(err.message); }
+  $("impMsg").textContent = "";
+};
+$("impPaste").addEventListener("input", () => {
+  clearTimeout(loadTable.t);
+  loadTable.t = setTimeout(() => { if ($("impPaste").value.trim()) { $("impFile").value = ""; loadTable(Importer.parseText($("impPaste").value)); } else resetImport(); }, 300);
+});
+$("impTeacher").onchange = () => IMP.length && previewImport();
+
+function previewImport() {
+  const admin = isAdminUser();
+  const active = new Set(S.teachers.filter(t => t.active).map(t => t.email));
+  const byId = {}, byNG = {}, seen = {};
+  S.students.forEach(s => { if (s.studentId) byId[String(s.studentId).toLowerCase()] = s; byNG[(s.name + "|" + s.grade).toLowerCase()] = s; });
+  IMP.forEach(r => {
+    r.errors = []; r.warns = [];
+    r.gradeN = normGrade(r.grade); r.unitN = normUnit(r.unit, r.gradeN); r.genderN = normGender(r.gender);
+    if (!r.name) r.errors.push("Student name is empty");
+    if (r.unitN === null) r.errors.push(`Unit “${r.unit}” must be MS or HS`);
+    else if (!r.unitN) r.warns.push("Unit not set");
+    if (!r.genderN) r.warns.push(r.gender ? `Gender “${r.gender}” not recognised` : "Gender not set");
+    if (admin && r.teacherEmail && !active.has(r.teacherEmail)) r.errors.push(`Teacher ${r.teacherEmail} not found`);
+    const k = r.studentId ? "id:" + r.studentId.toLowerCase() : "ng:" + (r.name + "|" + r.gradeN).toLowerCase();
+    if (r.name && seen[k]) r.errors.push(`Duplicate of line ${seen[k]}`); else if (r.name) seen[k] = r.line;
+    r.match = (r.studentId && byId[r.studentId.toLowerCase()]) || byNG[(r.name + "|" + r.gradeN).toLowerCase()] || null;
+  });
+  const ok = IMP.filter(r => !r.errors.length), nNew = ok.filter(r => !r.match).length, nUpd = ok.length - nNew, nBad = IMP.length - ok.length;
+  const units = { MS: ok.filter(r => r.unitN === "MS").length, HS: ok.filter(r => r.unitN === "HS").length };
+  $("impSummary").innerHTML = `<span class="pill on">${nNew} new</span><span class="pill upd">${nUpd} to update</span>${nBad ? `<span class="pill off">${nBad} with errors (skipped)</span>` : ""}<span class="pill">${units.MS} MS · ${units.HS} HS</span>`;
+  $("impSummary").hidden = false;
+  const showT = admin;
+  $("impTable").innerHTML = `<tr><th>Line</th><th>Student ID</th><th>Student name</th><th>Class</th><th>Unit</th><th>Gender</th>${showT ? "<th>Teacher</th>" : ""}<th>Status</th></tr>` +
+    IMP.map(r => `<tr class="${r.errors.length ? "bad" : ""}"><td>${r.line}</td><td>${esc(r.studentId)}</td><td>${esc(r.name)}</td><td>${esc(r.gradeN)}</td><td>${esc(r.unitN || r.unit)}</td><td>${r.genderN === "m" ? "M" : r.genderN === "f" ? "F" : esc(r.gender)}</td>${showT ? `<td>${esc(r.teacherEmail || "(default)")}</td>` : ""}
+      <td class="st">${r.errors.length ? `<span class="st-bad">Skipped</span><span class="st-warn">${esc(r.errors.join("; "))}</span>` : `<span class="${r.match ? "st-upd" : "st-new"}">${r.match ? "Update" : "New"}</span>${r.warns.length ? `<span class="st-warn">${esc(r.warns.join("; "))}</span>` : ""}`}</td></tr>`).join("");
+  $("impWrap").hidden = false;
+  $("impGo").disabled = !ok.length;
+  $("impGo").textContent = ok.length ? `Import ${ok.length} student${ok.length > 1 ? "s" : ""}` : "Nothing to import";
+}
+
+$("impGo").onclick = async () => {
+  const rows = IMP.filter(r => !r.errors.length).map(r => ({ line: r.line, studentId: r.studentId, name: r.name, grade: r.gradeN, unit: r.unitN || "", gender: r.genderN, teacherEmail: r.teacherEmail }));
+  if (!rows.length) return;
+  busy($("impGo"), true, "Importing…"); setSync("busy", "Importing");
+  let created = 0, updated = 0, skipped = [], failed = "";
+  for (let i = 0; i < rows.length; i += 200) {
+    $("impMsg").textContent = rows.length > 200 ? `Importing ${Math.min(i + 200, rows.length)} of ${rows.length}…` : "";
+    const r = await API.call("student.import", { rows: rows.slice(i, i + 200), teacherEmail: isAdminUser() ? $("impTeacher").value : "" });
+    if (!r.success) { failed = r.message; break; }
+    created += r.data.created; updated += r.data.updated; skipped = skipped.concat(r.data.skipped || []);
+    (r.data.students || []).forEach(st => { const k = S.students.findIndex(x => x.id === st.id); if (k > -1) S.students[k] = st; else S.students.push(st); });
+  }
+  busy($("impGo"), false); $("impMsg").textContent = "";
+  cacheNow();
+  if (failed) { setSync("err", "Not saved"); impError(failed + (created + updated ? ` (${created + updated} students were saved before the error.)` : "")); return; }
+  setSync("ok", "Saved");
+  const bad = IMP.filter(r => r.errors.length).map(r => ({ line: r.line, name: r.name, reason: r.errors.join("; ") })).concat(skipped);
+  $("impResult").innerHTML = `<div class="banner"><b>Import finished.</b> ${created} student${created === 1 ? "" : "s"} added, ${updated} updated${bad.length ? `, ${bad.length} skipped` : ""}.${bad.length ? `<ul style="margin:8px 0 0;padding-left:18px">${bad.map(b => `<li>Line ${b.line}${b.name ? " (" + esc(b.name) + ")" : ""}: ${esc(b.reason)}</li>`).join("")}</ul>` : ""}</div>`;
+  $("impResult").hidden = false; $("impWrap").hidden = $("impSummary").hidden = true; $("impGo").disabled = true;
+  IMP = []; $("impFile").value = ""; $("impPaste").value = "";
+  toast(`${created} added, ${updated} updated`);
+  renderStudents(); renderNotes();
+};
+
+/* ---------- step 1: time & location (preset options + own entry) ---------- */
+const PRESETS = {
+  nTime: ["Arrival", "Morning assembly", "Lesson", "Group work", "Break time", "Lunch", "Congregational prayer", "Extracurricular", "Dismissal"],
+  nLoc: ["Classroom", "Prayer room", "Library", "Laboratory", "Canteen", "Sports field", "Hall", "Corridor", "Online class"]
+};
+const OWN = "__own__";
+const ownList = id => { try { return JSON.parse(pref.get("own-" + id, "[]")) || []; } catch (e) { return []; } };
+function renderCombo(id, keep) {
+  const sel = $(id + "Sel"), own = ownList(id).filter(v => !PRESETS[id].includes(v));
+  sel.innerHTML = `<option value="">Select…</option>` + PRESETS[id].map(v => `<option>${esc(v)}</option>`).join("") +
+    (own.length ? `<optgroup label="Your entries">${own.map(v => `<option>${esc(v)}</option>`).join("")}</optgroup>` : "") +
+    `<option value="${OWN}">Other (type your own)…</option>`;
+  const v = keep !== undefined ? keep : $(id).value;
+  if (!v) { sel.value = ""; $(id).hidden = true; }
+  else if ([...sel.options].some(o => o.value === v)) { sel.value = v; $(id).hidden = true; }
+  else { sel.value = OWN; $(id).hidden = false; }
+  $(id).value = v || "";
+}
+function rememberOwn(id) {
+  const v = $(id).value.trim();
+  if (!v || PRESETS[id].includes(v)) return;
+  const list = [v].concat(ownList(id).filter(x => x.toLowerCase() !== v.toLowerCase())).slice(0, 8);
+  pref.set("own-" + id, JSON.stringify(list));
+  renderCombo(id, v);
+}
+["nTime", "nLoc"].forEach(id => {
+  $(id + "Sel").onchange = e => {
+    if (e.target.value === OWN) { $(id).value = ""; $(id).hidden = false; $(id).focus(); }
+    else { $(id).value = e.target.value; $(id).hidden = true; }
+    checkNote();
+  };
+  renderCombo(id, "");
+});
 
 /* ---------- step 1: records ---------- */
 $("nAspect").innerHTML = VALUES.map(v => `<optgroup label="${v.full}">${Object.entries(SUB).filter(([k, s]) => s.v === v.id).map(([k, s]) => `<option value="${k}">${s.n} (${s.id})</option>`).join("")}</optgroup>`).join("");
@@ -195,6 +355,7 @@ $("addNote").onclick = async () => {
   busy($("addNote"), false);
   if (!r.success) { setSync("err", "Not saved"); $("addMsg").textContent = r.message; return; }
   S.records.push(r.data.record);
+  rememberOwn("nTime"); rememberOwn("nLoc");
   ["nWhat", "nEnd"].forEach(id => $(id).value = ""); $("addMsg").textContent = "";
   setSync("ok", "Saved"); cacheNow(); checkNote(); renderNotes(); toast("Record saved");
 };

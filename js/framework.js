@@ -273,3 +273,28 @@ function qualityChecks(d,student,notes){
   C.sort((a,b)=>a.ok-b.ok);
   return C;
 }
+
+/* ---------- student fields (mirror normGrade_/normGender_/normUnit_ in Kode.gs) ---------- */
+const UNITS = { MS: "Middle School", HS: "High School" };
+const normGrade = v => String(v ?? "").trim().replace(/\s+/g, " ").toUpperCase().slice(0, 40);
+function normGender(v) {
+  const g = String(v ?? "").trim().toLowerCase();
+  if (/^(m|male|l|laki|laki-laki|laki laki|boy|pria)$/.test(g)) return "m";
+  if (/^(f|female|p|perempuan|girl|wanita)$/.test(g)) return "f";
+  return "";
+}
+function unitFromGrade(grade) {
+  const g = String(grade || "").toUpperCase(), num = g.match(/\d+/);
+  if (num) { const k = +num[0]; return k >= 7 && k <= 9 ? "MS" : k >= 10 && k <= 12 ? "HS" : ""; }
+  const rom = g.match(/^(?:GRADE\s+|KELAS\s+)?(XII|XI|X|IX|VIII|VII)\b/);
+  return rom ? { VII: "MS", VIII: "MS", IX: "MS", X: "HS", XI: "HS", XII: "HS" }[rom[1]] : "";
+}
+/* returns "MS", "HS", "" (unknown) or null (invalid value) */
+function normUnit(v, grade) {
+  const u = String(v ?? "").trim().toUpperCase().replace(/[^A-Z]/g, "");
+  if (/^(MS|SMP|MTS|MIDDLE|MIDDLESCHOOL|JHS|JUNIORHIGH)$/.test(u)) return "MS";
+  if (/^(HS|SMA|SMK|MA|HIGH|HIGHSCHOOL|SHS|SENIORHIGH)$/.test(u)) return "HS";
+  if (u) return null;
+  return unitFromGrade(grade);
+}
+const byClass = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });

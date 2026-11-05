@@ -48,10 +48,31 @@ const API = (() => {
       case "data.boot": return ok({ me: { email: "demo", name: "Demo teacher", role: "teacher" }, ...s });
       case "student.save": {
         if (!String(d.name || "").trim()) return fail("Please enter the student's name.");
-        const row = { id: d.id || id("S"), studentId: d.studentId || "", name: d.name.trim(), grade: d.grade || "", gender: d.gender || "", teacherEmail: "demo", updatedAt: now() };
+        const grade = normGrade(d.grade), unit = normUnit(d.unit, grade);
+        if (unit === null) return fail("Unit must be MS (Middle School) or HS (High School).");
+        const row = { id: d.id || id("S"), studentId: d.studentId || "", name: d.name.trim(), grade, gender: normGender(d.gender), unit, teacherEmail: "demo", updatedAt: now() };
         const i = s.students.findIndex(x => x.id === row.id);
         if (i > -1) s.students[i] = { ...s.students[i], ...row }; else s.students.push({ ...row, createdAt: now() });
         saveDb(s); return ok({ student: row }, "Student saved.");
+      }
+      case "student.import": {
+        const rows = d.rows || [], out = [], skipped = [], seen = {};
+        let created = 0, updated = 0;
+        rows.forEach((x, k) => {
+          const line = x.line || k + 1, name = String(x.name || "").trim(), sid = String(x.studentId || "").trim();
+          if (!name) return skipped.push({ line, reason: "The student name is empty." });
+          const grade = normGrade(x.grade), unit = normUnit(x.unit, grade);
+          if (unit === null) return skipped.push({ line, name, reason: "Unit must be MS or HS." });
+          const key = sid ? "id:" + sid.toLowerCase() : "ng:" + (name + "|" + grade).toLowerCase();
+          if (seen[key]) return skipped.push({ line, name, reason: "Duplicate of line " + seen[key] + " in this file." });
+          seen[key] = line;
+          let cur = (sid && s.students.find(t => String(t.studentId).toLowerCase() === sid.toLowerCase())) || s.students.find(t => (t.name + "|" + t.grade).toLowerCase() === (name + "|" + grade).toLowerCase());
+          if (cur) { Object.assign(cur, { studentId: sid || cur.studentId, name, grade: grade || cur.grade, gender: normGender(x.gender) || cur.gender, unit: unit || cur.unit, updatedAt: now() }); updated++; }
+          else { cur = { id: id("S"), studentId: sid, name, grade, gender: normGender(x.gender), unit, teacherEmail: "demo", createdAt: now(), updatedAt: now() }; s.students.push(cur); created++; }
+          out.push(cur);
+        });
+        saveDb(s);
+        return ok({ created, updated, skipped, students: out }, `${created} added, ${updated} updated.`);
       }
       case "student.delete":
         s.students = s.students.filter(x => x.id !== d.id);
