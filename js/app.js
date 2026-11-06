@@ -25,6 +25,7 @@ const toNote = r => ({ id: r.id, studentKey: r.studentKey, date: String(r.date |
 const isAdmin = () => !!(S.me && S.me.role === "admin");
 const canEditStudent = st => !!st && (API.LOCAL || isAdmin() || st.teacherEmail === S.me.email);
 const canDeleteStudent = st => !!st && (API.LOCAL || isAdmin());
+const canEditReport = st => canEditStudent(st) || (!!st && !!(S.settings && S.settings.trialMode));
 const canEditRecord = n => API.LOCAL || isAdmin() || n.by === S.me.email;
 const curStudent = () => S.students.find(s => s.id === S.cur) || null;
 const curNotes = () => S.records.filter(r => r.studentKey === S.cur && SUB[r.subValue]).map(toNote).sort((a, b) => a.date.localeCompare(b.date));
@@ -455,10 +456,12 @@ function renderDesk() {
   $("evCount").textContent = notes.length ? `${k} strength${k !== 1 ? "s" : ""} · ${p} area${p !== 1 ? "s" : ""} for development` : "";
   $("evList").innerHTML = notes.length ? notes.map(n => `<div class="evi"><span class="dot ${n.type}"></span><div><div class="d">${esc(sdate(n.date))} · ${esc(subLabel(n.aspect))}${n.by && !API.LOCAL ? " · " + esc(n.by === S.me.email ? "you" : teacherName(n.by)) : ""}</div>${esc(n.what)}</div></div>`).join("")
     : `<div class="empty">No records yet. Return to <b>Step 1</b> to write anecdotal records.</div>`;
-  const ed = canEditStudent(st);
+  const ed = canEditReport(st);
   $("draft").disabled = !notes.length || !ed;
   ["dS", "dW", "dG"].forEach(id => $(id).readOnly = !ed);
-  $("deskLock").hidden = ed;
+  const trial = ed && !canEditStudent(st);
+  $("deskLock").hidden = ed && !trial;
+  if (trial) $("deskLock").innerHTML = `<b>Trial mode.</b> You can edit this description for practice. The homeroom teacher of ${esc(st.name)} is ${esc(teacherName(st.teacherEmail))}.`;
   if (!ed) $("deskLock").innerHTML = `<b>View only.</b> The character description of ${esc(st.name)} is written by the homeroom teacher, ${esc(teacherName(st.teacherEmail))}, or an administrator. Your anecdotal records are included automatically.`;
   $("dS").value = rep.strengths || ""; $("dW").value = rep.weaknesses || ""; $("dG").value = rep.recommendations || "";
   const warn = [];
@@ -484,19 +487,21 @@ $("narr").onclick = () => {
 };
 function renderRapor() {
   const rep = curReport();
-  const st = curStudent(), ed = canEditStudent(st);
+  const st = curStudent(), ed = canEditReport(st);
   RF.forEach(([id, k]) => { $(id).value = rep[k] || ""; $(id).readOnly = !ed; });
   $("rDate").disabled = !ed;
   $("rTeacher").value = pref.get("teacher-name-" + st.id, API.LOCAL ? pref.get("teacher-name", "") : teacherName(st.teacherEmail));
   $("narr").disabled = !curNotes().length || !ed;
-  $("raporLock").hidden = ed;
+  const trial = ed && !canEditStudent(st);
+  $("raporLock").hidden = ed && !trial;
+  if (trial) $("raporLock").innerHTML = `<b>Trial mode.</b> You can edit this report for practice. The homeroom teacher of ${esc(st.name)} is ${esc(teacherName(st.teacherEmail))}.`;
   if (!ed) $("raporLock").innerHTML = `<b>View only.</b> The report of ${esc(st.name)} is prepared by the homeroom teacher, ${esc(teacherName(st.teacherEmail))}, or an administrator. You can still view and download it.`;
   renderReport();
 }
 function currentData() { return reportData(curStudent(), curReport(), curNotes()); }
 function renderReport() {
   const d = currentData(), rep = curReport();
-  $("report").innerHTML = reportHTML(d, canEditStudent(curStudent()));
+  $("report").innerHTML = reportHTML(d, canEditReport(curStudent()));
   $("report").querySelectorAll(".cell").forEach(b => b.onclick = () => {
     const c = b.dataset.ch, l = b.dataset.lv;
     if (rep.grades[c] === l) delete rep.grades[c]; else rep.grades[c] = l;
@@ -556,7 +561,20 @@ $("copyTable").onclick = () => {
 };
 
 /* ---------- admin ---------- */
+function renderTrial() {
+  const on = !!(S.settings && S.settings.trialMode);
+  $("trialMode").checked = on;
+  $("trialPill").textContent = on ? "On" : "Off"; $("trialPill").className = "pill " + (on ? "on" : "off");
+}
+$("trialMode").onchange = async e => {
+  const want = e.target.checked; e.target.disabled = true; setSync("busy", "Saving");
+  const r = await API.call("settings.save", { trialMode: want });
+  e.target.disabled = false;
+  if (!r.success) { setSync("err", "Not saved"); e.target.checked = !want; return toast(r.message); }
+  S.settings = r.data.settings; cacheNow(); setSync("ok", "Saved"); renderTrial(); toast(r.message);
+};
 function renderAdmin() {
+  renderTrial();
   $("tCount").textContent = `${S.teachers.length} account${S.teachers.length !== 1 ? "s" : ""}`;
   const count = e => S.students.filter(s => s.teacherEmail === e).length;
   $("tTable").innerHTML = `<tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Students</th><th></th></tr>` +
@@ -624,10 +642,10 @@ $("btnOut").onclick = () => { API.setToken(""); if (S.me) API.cacheClear(S.me.em
 
 /* ---------- boot ---------- */
 function applyBoot(d) {
-  S.me = d.me || S.me; S.students = d.students || []; S.records = d.records || []; S.teachers = d.teachers || [];
+  S.me = d.me || S.me; S.students = d.students || []; S.records = d.records || []; S.teachers = d.teachers || []; S.settings = d.settings || {};
   S.reports = (d.reports || []).map(r => ({ ...r, grades: typeof r.grades === "string" ? (JSON.parse(r.grades || "{}")) : (r.grades || {}) }));
 }
-function cacheNow() { if (!API.LOCAL && S.me) API.cacheSet(S.me.email, { me: S.me, students: S.students, records: S.records, reports: S.reports, teachers: S.teachers }); }
+function cacheNow() { if (!API.LOCAL && S.me) API.cacheSet(S.me.email, { me: S.me, students: S.students, records: S.records, reports: S.reports, teachers: S.teachers, settings: S.settings }); }
 function renderShell() {
   const isAdmin = S.me && S.me.role === "admin";
   $("who").innerHTML = API.LOCAL ? "" : `<b>${esc(S.me ? S.me.name : "")}</b>${isAdmin && S.me.name !== "Administrator" ? " · Administrator" : ""}`;

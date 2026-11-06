@@ -263,6 +263,11 @@
 
   <!-- ADMIN -->
   <section class="panel" id="p-admin" role="tabpanel" hidden>
+    <div class="box" style="display:grid;gap:12px">
+      <div class="row between"><h2>Trial mode</h2><span class="pill" id="trialPill">Off</span></div>
+      <p class="hint">For training sessions. When trial mode is on, every teacher can draft and edit the character description and report of any student, not only their homeroom students. Turn it off when the trial ends; the reports written during the trial are kept.</p>
+      <label class="check" for="trialMode"><input type="checkbox" id="trialMode"> Allow every teacher to edit character descriptions and reports</label>
+    </div>
     <div class="box" style="display:grid;gap:14px">
       <h2>Add or update a teacher account</h2>
       <form id="tForm" class="fields f4">
