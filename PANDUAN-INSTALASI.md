@@ -174,7 +174,7 @@ Tunggu 1–2 menit → muncul *"Your site is live at https://USERNAME.github.io/
 4. Guru login → wajib mengganti kata sandi → mulai menambah siswa dan catatan.
 
 **Mengisi daftar siswa sekaligus (impor):**
-1. Tab **Anecdotal records** → klik **Import students** → **Download Excel template**.
+1. Login sebagai **admin** → tab **Anecdotal records** → klik **Import students** → **Download Excel template**.
 2. Isi satu siswa per baris: Student ID, Student Name, Grade / Class, Unit (MS/HS), Gender (M/F). Admin juga punya kolom **Teacher Email** untuk menentukan wali kelas tiap siswa.
    Admin **wajib** memilih **Homeroom teacher** di atas pratinjau, atau mengisi kolom Teacher Email. Tanpa itu, siswa baru tidak bisa diimpor (supaya siswa tidak tercatat milik admin).
 3. Unggah berkasnya (.xlsx, .xls, atau .csv), atau salin baris dari Excel/Google Sheets (termasuk baris judul) lalu tempel di kotak yang tersedia.
@@ -186,7 +186,7 @@ Catatan impor:
 - Siswa dicocokkan lewat **Student ID**, atau lewat **nama + kelas** bila ID kosong, jadi mengimpor ulang berkas yang sama tidak membuat data ganda.
 - Bila kolom Unit kosong, unit ditebak dari kelas: 7–9 → **MS**, 10–12 → **HS** (angka Romawi VII–XII juga dikenali).
 - Judul kolom berbahasa Indonesia juga dikenali, misalnya NIS, Nama Siswa, Kelas, Jenjang (SMP/SMA), dan JK (L/P).
-- Guru yang mengimpor otomatis menjadi wali kelas siswa baru tersebut. Siswa yang sudah dimiliki wali kelas lain tidak bisa ditimpa oleh guru (baris dilewati).
+- Impor hanya untuk **admin**. Guru tidak melihat tombol Import students.
 
 Setelah ada banyak siswa, gunakan filter **Unit**, **Class**, dan **Homeroom teacher** di atas pilihan siswa. Pilih **My homeroom students** untuk melihat siswa perwalian Anda saja.
 
@@ -204,7 +204,8 @@ Hak akses (versi 1.2):
 | Melihat deskripsi & rapor, unduh PDF/Word | ✅ | ✅ | ✅ |
 | Menyusun & mengedit deskripsi dan rapor | ❌ (lihat saja) | ✅ | ✅ |
 | Mengubah data siswa | ❌ | ✅ | ✅ |
-| Menambah / mengimpor siswa | ✅ (menjadi wali kelasnya) | ✅ | ✅ |
+| Menambah siswa satu per satu (mis. siswa latihan) | ✅ (menjadi wali kelasnya) | ✅ | ✅ |
+| Impor siswa dari Excel | ❌ | ❌ | ✅ |
 | Menghapus siswa, memindah wali kelas, kelola akun guru | ❌ | ❌ | ✅ |
 
 Catatan dari semua guru untuk satu siswa digabung: semua terlihat di Langkah 1 dan Langkah 2 (dengan nama penulisnya) dan dipakai saat menyusun narasi rapor.

@@ -159,8 +159,10 @@ function renderStudents() {
   $("stuEdit").disabled = !canEditStudent(st);
   $("stuDel").hidden = !(API.LOCAL || isAdmin()); $("stuDel").disabled = !canDeleteStudent(st);
   $("movOpen").hidden = !isAdmin() || API.LOCAL;
+  $("impOpen").hidden = !(isAdmin() || API.LOCAL);          // v1.2.1: import is for administrators only
+  if ($("impOpen").hidden) $("impPanel").hidden = true;
   $("stuInfo").textContent = st ? [st.studentId && "ID " + st.studentId, st.grade && "Class " + st.grade, unitOf(st) ? `${unitOf(st)} · ${UNITS[unitOf(st)]}` : "Unit not set", st.gender === "m" ? "Male" : st.gender === "f" ? "Female" : "Gender not set", !API.LOCAL && ("Homeroom: " + (st.teacherEmail === S.me.email ? "you" : teacherName(st.teacherEmail)))].filter(Boolean).join(" · ")
-    : S.students.length ? "Change the filter to see more students." : "Add your first student, or import a class list from Excel.";
+    : S.students.length ? "Change the filter to see more students." : (isAdmin() || API.LOCAL ? "Add your first student, or import a class list from Excel." : "No students yet. Ask the administrator to import the student list, or add a practice student.");
   $("recordArea").classList.toggle("locked", !st);
   if (!S.students.length && $("stuForm").hidden && $("impPanel").hidden) openStudentForm(null);
 }
