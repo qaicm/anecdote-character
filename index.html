@@ -88,9 +88,10 @@
       <div class="stufilters">
         <div><label for="fUnit">Unit</label><select id="fUnit"><option value="">All units</option><option value="MS">MS · Middle School</option><option value="HS">HS · High School</option><option value="-">Unit not set</option></select></div>
         <div><label for="fClass">Class</label><select id="fClass"></select></div>
+        <div id="fOwnerWrap" hidden><label for="fOwner">Homeroom teacher</label><select id="fOwner"></select></div>
         <div class="grow"><label for="stuSel">Student <span class="count" id="stuCount"></span></label><select id="stuSel"></select></div>
       </div>
-      <div class="row" style="gap:8px"><button class="btn ghost small" id="stuNew">New student</button><button class="btn ghost small" id="stuEdit">Edit</button><button class="btn warn small" id="stuDel">Delete</button><button class="btn small" id="impOpen">Import students</button></div>
+      <div class="row" style="gap:8px"><button class="btn ghost small" id="stuNew">New student</button><button class="btn ghost small" id="stuEdit">Edit</button><button class="btn warn small" id="stuDel">Delete</button><button class="btn small" id="impOpen">Import students</button><button class="btn ghost small" id="movOpen" hidden>Move students</button></div>
       <p class="stuinfo" id="stuInfo"></p>
       <form id="stuForm" hidden style="display:grid;gap:14px;border-top:1px solid var(--line);padding-top:14px">
         <h3 id="stuFormTitle">New student</h3>
@@ -114,12 +115,23 @@
             <div class="impin"><input type="file" id="impFile" accept=".xlsx,.xls,.csv,.txt"><textarea id="impPaste" rows="3" placeholder="Student ID&#9;Student Name&#9;Grade / Class&#9;Unit&#9;Gender"></textarea></div></div></div>
           <div class="impstep"><span class="k">3</span><div><b>Check the preview</b>, then import. Students with the same Student ID, or the same name and class, are updated instead of duplicated. When Unit is empty, it is detected from the class: 7–9 is MS and 10–12 is HS.</div></div>
         </div>
-        <div id="impAdmin" hidden><label for="impTeacher">Assign to teacher <span class="hint">used when the Teacher Email column is empty</span></label><select id="impTeacher"></select></div>
+        <div id="impAdmin" hidden><label for="impTeacher">Homeroom teacher <span class="hint">required for new students when the Teacher Email column is empty</span></label><select id="impTeacher"></select></div>
         <div class="alert" id="impErr" hidden></div>
         <div id="impSummary" class="impsum" hidden></div>
         <div class="impwrap" id="impWrap" hidden><table class="tbl imptbl" id="impTable"></table></div>
         <div class="row"><button class="btn" type="button" id="impGo" disabled>Import</button><span class="hint" id="impMsg"></span></div>
         <div id="impResult" hidden></div>
+      </section>
+
+      <section id="movPanel" class="imp" hidden>
+        <div class="row between"><h3>Move students to another homeroom teacher</h3><button class="linkbtn" type="button" id="movClose">Close</button></div>
+        <p class="hint">Use the Unit, Class and Homeroom teacher filters above to choose the students. Every student currently shown in the Student list is moved. Anecdotal records and reports stay with each student.</p>
+        <p id="movInfo"></p>
+        <div class="fields f4">
+          <div class="w2"><label for="movTeacher">New homeroom teacher</label><select id="movTeacher"></select></div>
+          <div class="w2" style="grid-column:span 2;align-self:end"><button class="btn" type="button" id="movGo">Move students</button></div>
+        </div>
+        <div class="impwrap" style="max-height:260px"><table class="tbl imptbl" id="movTable"></table></div>
       </section>
     </div>
 
@@ -159,6 +171,7 @@
 
   <!-- STEP 2 -->
   <section class="panel" id="p-desk" role="tabpanel" hidden>
+    <div class="banner" id="deskLock" hidden></div>
     <div class="grid2">
       <div class="box" style="display:grid;gap:12px;align-content:start">
         <div class="row between"><h2>Evidence from Step 1</h2><span class="count" id="evCount"></span></div>
@@ -179,6 +192,7 @@
 
   <!-- STEP 3 -->
   <section class="panel" id="p-rapor" role="tabpanel" hidden>
+    <div class="banner" id="raporLock" hidden></div>
     <div class="box">
       <h2 style="margin-bottom:12px">Report details</h2>
       <div class="fields f4">

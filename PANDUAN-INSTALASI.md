@@ -7,7 +7,7 @@ Aplikasi pencatatan anekdot siswa → deskripsi karakter → rapor karakter (und
 
 Perkiraan waktu: 30–45 menit untuk pertama kali.
 
-> **Sudah memasang versi 1.0?** Langsung ke **bagian 5A — Memperbarui ke versi 1.1** (impor siswa, unit MS/HS, pilihan Time/Location). Data yang sudah ada tetap aman.
+> **Sudah memasang versi sebelumnya?** Langsung ke **bagian 5A — Memperbarui ke versi 1.2** (impor siswa, unit MS/HS, pilihan Time/Location, daftar siswa bersama untuk semua guru, pindah wali kelas massal). Data yang sudah ada tetap aman.
 
 ---
 
@@ -176,6 +176,7 @@ Tunggu 1–2 menit → muncul *"Your site is live at https://USERNAME.github.io/
 **Mengisi daftar siswa sekaligus (impor):**
 1. Tab **Anecdotal records** → klik **Import students** → **Download Excel template**.
 2. Isi satu siswa per baris: Student ID, Student Name, Grade / Class, Unit (MS/HS), Gender (M/F). Admin juga punya kolom **Teacher Email** untuk menentukan wali kelas tiap siswa.
+   Admin **wajib** memilih **Homeroom teacher** di atas pratinjau, atau mengisi kolom Teacher Email. Tanpa itu, siswa baru tidak bisa diimpor (supaya siswa tidak tercatat milik admin).
 3. Unggah berkasnya (.xlsx, .xls, atau .csv), atau salin baris dari Excel/Google Sheets (termasuk baris judul) lalu tempel di kotak yang tersedia.
 4. Periksa pratinjau: **New** = siswa baru, **Update** = siswa yang sudah ada akan diperbarui, **Skipped** = baris bermasalah beserta alasannya.
 5. Klik **Import N students**.
@@ -185,21 +186,34 @@ Catatan impor:
 - Siswa dicocokkan lewat **Student ID**, atau lewat **nama + kelas** bila ID kosong, jadi mengimpor ulang berkas yang sama tidak membuat data ganda.
 - Bila kolom Unit kosong, unit ditebak dari kelas: 7–9 → **MS**, 10–12 → **HS** (angka Romawi VII–XII juga dikenali).
 - Judul kolom berbahasa Indonesia juga dikenali, misalnya NIS, Nama Siswa, Kelas, Jenjang (SMP/SMA), dan JK (L/P).
-- Guru hanya bisa mengimpor ke daftar siswanya sendiri. Admin bisa membagi siswa ke guru lain lewat kolom Teacher Email atau pilihan **Assign to teacher**.
+- Guru yang mengimpor otomatis menjadi wali kelas siswa baru tersebut. Siswa yang sudah dimiliki wali kelas lain tidak bisa ditimpa oleh guru (baris dilewati).
 
-Setelah ada banyak siswa, gunakan filter **Unit** dan **Class** di atas pilihan siswa.
+Setelah ada banyak siswa, gunakan filter **Unit**, **Class**, dan **Homeroom teacher** di atas pilihan siswa. Pilih **My homeroom students** untuk melihat siswa perwalian Anda saja.
+
+**Memindahkan wali kelas (admin):** atur filter Unit/Class/Homeroom teacher sampai daftar siswa berisi siswa yang ingin dipindah → klik **Move students** → pilih wali kelas baru → klik tombol **Move** dua kali (konfirmasi). Catatan anekdot dan rapor ikut bersama siswa. Cara ini juga untuk membetulkan siswa hasil impor lama yang tercatat milik Administrator.
 
 **Time dan Location:** pilih dari daftar, atau pilih **Other (type your own)…** untuk menulis sendiri. Isian sendiri diingat di perangkat itu dan muncul di bagian **Your entries**.
 
-Hak akses:
-- **Teacher:** hanya melihat dan mengubah siswa miliknya sendiri.
-- **Administrator:** melihat semua siswa, memindahkan siswa ke guru lain, mengelola akun guru, me-reset kata sandi.
+Hak akses (versi 1.2):
+
+| Kegiatan | Guru | Wali kelas siswa itu | Admin |
+|---|---|---|---|
+| Melihat & memilih semua siswa | ✅ | ✅ | ✅ |
+| Menulis catatan anekdot untuk siswa mana pun | ✅ | ✅ | ✅ |
+| Mengubah / menghapus catatan | hanya catatannya sendiri | hanya catatannya sendiri | semua |
+| Melihat deskripsi & rapor, unduh PDF/Word | ✅ | ✅ | ✅ |
+| Menyusun & mengedit deskripsi dan rapor | ❌ (lihat saja) | ✅ | ✅ |
+| Mengubah data siswa | ❌ | ✅ | ✅ |
+| Menambah / mengimpor siswa | ✅ (menjadi wali kelasnya) | ✅ | ✅ |
+| Menghapus siswa, memindah wali kelas, kelola akun guru | ❌ | ❌ | ✅ |
+
+Catatan dari semua guru untuk satu siswa digabung: semua terlihat di Langkah 1 dan Langkah 2 (dengan nama penulisnya) dan dipakai saat menyusun narasi rapor.
 
 ---
 
-## 5A. Memperbarui ke versi 1.1
+## 5A. Memperbarui ke versi 1.2
 
-Versi 1.1 menambahkan impor siswa, kolom Unit (MS/HS), filter Unit/Class, dan isian sendiri untuk Time/Location.
+Versi 1.1–1.2 menambahkan impor siswa, kolom Unit (MS/HS), filter Unit/Class/Homeroom teacher, isian sendiri untuk Time/Location, daftar siswa bersama untuk semua guru, dan pindah wali kelas massal.
 
 1. **Backend:** buka proyek Apps Script → `Kode.gs` → hapus semua isinya → tempel `Kode.gs` versi baru → **Ctrl+S**.
 2. **Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy.** URL `/exec` tetap sama.
@@ -207,10 +221,12 @@ Versi 1.1 menambahkan impor siswa, kolom Unit (MS/HS), filter Unit/Class, dan is
 4. Dari folder `anecdote-character`:
    ```bash
    git add .
-   git commit -m "Versi 1.1: impor siswa dan unit"
+   git commit -m "Versi 1.2: siswa bersama dan pindah wali kelas"
    git push
    ```
 5. Buka situs dengan **Ctrl+Shift+R**.
+
+Setelah update, siswa yang dulu tercatat milik Administrator bisa dipindah ke wali kelas yang benar lewat **Move students** (lihat bagian 4).
 
 Database lama tidak perlu diubah manual. Kolom `unit` ditambahkan otomatis di sheet `Students` saat aplikasi pertama kali dipakai. Untuk mengisi unit siswa lama, impor ulang daftar siswa dengan Student ID yang sama, atau ubah satu per satu lewat **Edit**.
 
@@ -287,6 +303,8 @@ Sheet ini bisa dipakai untuk rekap (filter, pivot) tanpa mengubah aplikasi. Hind
 | Lupa kata sandi guru | — | Admin → tab Teachers → **Reset password** |
 | Lupa kata sandi admin | — | Jalankan `resetAdminPassword()` di Apps Script |
 | Tombol **Import students** tidak muncul | Frontend belum diperbarui atau cache browser | Pastikan `js/importer.js` ikut di-push, lalu Ctrl+Shift+R |
-| Impor gagal: "Unknown action: student.import" | Backend belum diperbarui ke 1.1 | Bagian 5A langkah 1–2 (New version) |
+| Impor gagal: "Unknown action: student.import" / tombol Move gagal | Backend belum diperbarui ke 1.2 | Bagian 5A langkah 1–2 (New version) |
+| Guru tidak melihat siswa guru lain | Backend masih versi lama | Bagian 5A langkah 1–2 |
+| "Only the homeroom teacher … can edit the report" | Anda bukan wali kelas siswa itu | Minta admin memindahkan siswa ke Anda bila memang wali kelasnya |
 | Student ID 00123 menjadi 123 | Kolom ID di Excel berformat angka | Pakai templat dari aplikasi (kolom ID sudah berformat teks), atau ketik `'00123` |
 | Berkas CSV terbaca satu kolom | Pemisah kolom tidak umum | Aplikasi mengenali koma, titik koma, dan tab. Bila masih gagal, simpan sebagai .xlsx |

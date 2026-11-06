@@ -20,7 +20,12 @@ function confirmClick(btn, label, fn) {
 }
 
 /* ---------- data accessors ---------- */
-const toNote = r => ({ id: r.id, studentKey: r.studentKey, date: String(r.date || ""), time: r.time, loc: r.location, what: r.what, end: r.ending, aspect: r.subValue, type: r.type });
+const toNote = r => ({ id: r.id, studentKey: r.studentKey, date: String(r.date || ""), time: r.time, loc: r.location, what: r.what, end: r.ending, aspect: r.subValue, type: r.type, by: r.teacherEmail || "" });
+/* v1.2 permissions: everyone sees every student; homeroom teacher or admin edits the student and report; authors edit their own records */
+const isAdmin = () => !!(S.me && S.me.role === "admin");
+const canEditStudent = st => !!st && (API.LOCAL || isAdmin() || st.teacherEmail === S.me.email);
+const canDeleteStudent = st => !!st && (API.LOCAL || isAdmin());
+const canEditRecord = n => API.LOCAL || isAdmin() || n.by === S.me.email;
 const curStudent = () => S.students.find(s => s.id === S.cur) || null;
 const curNotes = () => S.records.filter(r => r.studentKey === S.cur && SUB[r.subValue]).map(toNote).sort((a, b) => a.date.localeCompare(b.date));
 function academicYear() { const d = new Date(), y = d.getFullYear(); return d.getMonth() >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`; }
@@ -41,7 +46,7 @@ function reportData(student, rep, notes) {
 /* ---------- shared renderers ---------- */
 function noteHTML(n, canDel) {
   return `<article class="note">
-    <div class="meta"><span>${esc(sdate(n.date))}</span>${n.time ? `<span>· ${esc(n.time)}</span>` : ""}${n.loc ? `<span>· ${esc(n.loc)}</span>` : ""}</div>
+    <div class="meta"><span>${esc(sdate(n.date))}</span>${n.time ? `<span>· ${esc(n.time)}</span>` : ""}${n.loc ? `<span>· ${esc(n.loc)}</span>` : ""}${n.by && !API.LOCAL ? `<span>· by <span class="by">${esc(n.by === S.me.email ? "you" : teacherName(n.by))}</span></span>` : ""}</div>
     <p class="body">${esc(n.what)}</p>${n.end ? `<p class="end">${esc(n.end)}</p>` : ""}
     <div class="tagrow"><span class="tag">${esc(subLabel(n.aspect))}</span><span class="tag ${n.type}">${n.type === "k" ? "Strength" : "Area for development"}</span>
     ${canDel ? `<button class="del" data-del="${esc(n.id)}">Delete</button>` : ""}</div></article>`;
@@ -117,8 +122,21 @@ $("fw").innerHTML = VALUES.map(v => `<div class="fwv"><h3>${v.full}<small>${v.ar
 function teacherName(email) { const t = S.teachers.find(x => x.email === email); return t ? t.name : email; }
 const unitOf = st => st.unit || "";
 function filteredStudents() {
-  const fu = $("fUnit").value, fc = $("fClass").value;
-  return S.students.filter(s => (!fu || (fu === "-" ? !unitOf(s) : unitOf(s) === fu)) && (!fc || s.grade === fc));
+  const fu = $("fUnit").value, fc = $("fClass").value, fo = API.LOCAL ? "" : $("fOwner").value;
+  return S.students.filter(s => (!fu || (fu === "-" ? !unitOf(s) : unitOf(s) === fu)) && (!fc || s.grade === fc) &&
+    (!fo || (fo === "@me" ? s.teacherEmail === S.me.email : s.teacherEmail === fo)));
+}
+function renderOwnerFilter() {
+  $("fOwnerWrap").hidden = API.LOCAL;
+  if (API.LOCAL) return;
+  const cur = $("fOwner").dataset.init ? $("fOwner").value : pref.get("f-owner", "");
+  const counts = {}; S.students.forEach(s => counts[s.teacherEmail] = (counts[s.teacherEmail] || 0) + 1);
+  const mine = counts[S.me.email] || 0;
+  const others = Object.keys(counts).filter(e => e !== S.me.email).sort((a, b) => teacherName(a).localeCompare(teacherName(b)));
+  $("fOwner").innerHTML = `<option value="">All teachers</option>` + (mine || !isAdmin() ? `<option value="@me">My homeroom students (${mine})</option>` : "") +
+    others.map(e => `<option value="${esc(e)}">${esc(teacherName(e))} (${counts[e]})</option>`).join("");
+  $("fOwner").value = [...$("fOwner").options].some(o => o.value === cur) ? cur : "";
+  $("fOwner").dataset.init = "1";
 }
 function renderClassFilter() {
   const fu = $("fUnit").value, cur = $("fClass").value || pref.get("f-class", "");
@@ -127,31 +145,33 @@ function renderClassFilter() {
   $("fClass").value = classes.includes(cur) ? cur : "";
 }
 function renderStudents() {
-  const isAdmin = S.me && S.me.role === "admin";
   if (!$("fUnit").dataset.init) { $("fUnit").value = pref.get("f-unit", ""); $("fUnit").dataset.init = "1"; }
-  renderClassFilter();
+  renderClassFilter(); renderOwnerFilter();
   const order = { MS: 1, HS: 2, "": 3 };
   const list = filteredStudents().sort((a, b) => (order[unitOf(a)] - order[unitOf(b)]) || byClass(a.grade, b.grade) || String(a.name).localeCompare(String(b.name)));
   $("stuCount").textContent = S.students.length ? (list.length === S.students.length ? `${list.length}` : `${list.length} of ${S.students.length}`) : "";
   $("stuSel").innerHTML = list.length
-    ? list.map(s => `<option value="${esc(s.id)}">${esc(s.name)}${s.grade ? " · " + esc(s.grade) : ""}${unitOf(s) ? " · " + unitOf(s) : ""}${isAdmin ? " · " + esc(teacherName(s.teacherEmail)) : ""}</option>`).join("")
+    ? list.map(s => `<option value="${esc(s.id)}">${esc(s.name)}${s.grade ? " · " + esc(s.grade) : ""}${unitOf(s) ? " · " + unitOf(s) : ""}${!API.LOCAL && s.teacherEmail !== S.me.email ? " · " + esc(teacherName(s.teacherEmail)) : ""}</option>`).join("")
     : `<option value="">${S.students.length ? "No students match the filter" : "No students yet"}</option>`;
   if (!list.some(s => s.id === S.cur)) S.cur = list[0] ? list[0].id : "";
   $("stuSel").value = S.cur;
   const st = curStudent();
-  $("stuEdit").disabled = $("stuDel").disabled = !st;
-  $("stuInfo").textContent = st ? [st.studentId && "ID " + st.studentId, st.grade && "Class " + st.grade, unitOf(st) ? `${unitOf(st)} · ${UNITS[unitOf(st)]}` : "Unit not set", st.gender === "m" ? "Male" : st.gender === "f" ? "Female" : "Gender not set"].filter(Boolean).join(" · ")
+  $("stuEdit").disabled = !canEditStudent(st);
+  $("stuDel").hidden = !(API.LOCAL || isAdmin()); $("stuDel").disabled = !canDeleteStudent(st);
+  $("movOpen").hidden = !isAdmin() || API.LOCAL;
+  $("stuInfo").textContent = st ? [st.studentId && "ID " + st.studentId, st.grade && "Class " + st.grade, unitOf(st) ? `${unitOf(st)} · ${UNITS[unitOf(st)]}` : "Unit not set", st.gender === "m" ? "Male" : st.gender === "f" ? "Female" : "Gender not set", !API.LOCAL && ("Homeroom: " + (st.teacherEmail === S.me.email ? "you" : teacherName(st.teacherEmail)))].filter(Boolean).join(" · ")
     : S.students.length ? "Change the filter to see more students." : "Add your first student, or import a class list from Excel.";
   $("recordArea").classList.toggle("locked", !st);
   if (!S.students.length && $("stuForm").hidden && $("impPanel").hidden) openStudentForm(null);
 }
 $("fUnit").onchange = e => { pref.set("f-unit", e.target.value); $("fClass").value = ""; pref.set("f-class", ""); renderStep1(); };
 $("fClass").onchange = e => { pref.set("f-class", e.target.value); renderStep1(); };
+$("fOwner").onchange = e => { pref.set("f-owner", e.target.value); renderStep1(); };
 $("stuSel").onchange = e => { S.cur = e.target.value; pref.set("cur", S.cur); $("stuForm").hidden = true; renderStep1(); };
 function openStudentForm(st) {
   $("stuForm").hidden = false; $("stuMsg").textContent = "";
   $("stuFormTitle").textContent = st ? "Edit student" : "New student";
-  $("impPanel").hidden = true;
+  $("impPanel").hidden = true; $("movPanel").hidden = true;
   $("sName").value = st ? st.name : ""; $("sId").value = st ? st.studentId : ""; $("sClass").value = st ? st.grade : ""; $("sGender").value = st ? st.gender : ""; $("sUnit").value = st ? unitOf(st) : ($("fUnit").value === "MS" || $("fUnit").value === "HS" ? $("fUnit").value : "");
   const isAdmin = S.me && S.me.role === "admin";
   $("sTeacherWrap").hidden = !isAdmin;
@@ -198,17 +218,19 @@ function revealStudent(st) {
   const fu = $("fUnit").value;
   if (fu && (fu === "-" ? unitOf(st) : unitOf(st) !== fu)) { $("fUnit").value = ""; pref.set("f-unit", ""); }
   if ($("fClass").value && $("fClass").value !== st.grade) { $("fClass").value = ""; pref.set("f-class", ""); }
+  const fo = $("fOwner").value;
+  if (fo && (fo === "@me" ? st.teacherEmail !== S.me.email : st.teacherEmail !== fo)) { $("fOwner").value = ""; pref.set("f-owner", ""); }
 }
 
 /* ---------- step 1: import students ---------- */
 let IMP = [];
 const isAdminUser = () => S.me && S.me.role === "admin";
 function openImport() {
-  $("stuForm").hidden = true; $("impPanel").hidden = false;
+  $("stuForm").hidden = true; $("movPanel").hidden = true; $("impPanel").hidden = false;
   $("impAdmin").hidden = $("impTplTeacher").hidden = !isAdminUser();
   if (isAdminUser()) {
-    $("impTeacher").innerHTML = S.teachers.filter(t => t.active).map(t => `<option value="${esc(t.email)}">${esc(t.name)} (${esc(t.email)})</option>`).join("");
-    $("impTeacher").value = S.me.email;
+    $("impTeacher").innerHTML = `<option value="">Choose a homeroom teacher…</option>` + S.teachers.filter(t => t.active).map(t => `<option value="${esc(t.email)}">${esc(t.name)} (${esc(t.email)})${t.role === "admin" ? " · Administrator" : ""}</option>`).join("");
+    $("impTeacher").value = "";
   }
   resetImport(); $("impPanel").scrollIntoView({ block: "nearest" });
 }
@@ -261,6 +283,7 @@ function previewImport() {
     const k = r.studentId ? "id:" + r.studentId.toLowerCase() : "ng:" + (r.name + "|" + r.gradeN).toLowerCase();
     if (r.name && seen[k]) r.errors.push(`Duplicate of line ${seen[k]}`); else if (r.name) seen[k] = r.line;
     r.match = (r.studentId && byId[r.studentId.toLowerCase()]) || byNG[(r.name + "|" + r.gradeN).toLowerCase()] || null;
+    if (admin && !r.match && !r.teacherEmail && !$("impTeacher").value && !r.errors.length) r.errors.push("Choose a homeroom teacher above, or fill in the Teacher Email column");
   });
   const ok = IMP.filter(r => !r.errors.length), nNew = ok.filter(r => !r.match).length, nUpd = ok.length - nNew, nBad = IMP.length - ok.length;
   const units = { MS: ok.filter(r => r.unitN === "MS").length, HS: ok.filter(r => r.unitN === "HS").length };
@@ -297,6 +320,39 @@ $("impGo").onclick = async () => {
   IMP = []; $("impFile").value = ""; $("impPaste").value = "";
   toast(`${created} added, ${updated} updated`);
   renderStudents(); renderNotes();
+};
+
+/* ---------- step 1: move students (admin) ---------- */
+function renderMove() {
+  const list = filteredStudents();
+  const f = [$("fUnit").value && ($("fUnit").value === "-" ? "Unit not set" : "Unit " + $("fUnit").value), $("fClass").value && "Class " + $("fClass").value, $("fOwner").value && "Homeroom " + ($("fOwner").value === "@me" ? "you" : teacherName($("fOwner").value))].filter(Boolean);
+  $("movInfo").innerHTML = `<b>${list.length} student${list.length === 1 ? "" : "s"}</b> selected${f.length ? " (" + esc(f.join(", ")) + ")" : " (all students — use the filters to narrow the list)"}.`;
+  $("movTable").innerHTML = `<tr><th>Student</th><th>Class</th><th>Unit</th><th>Current homeroom teacher</th></tr>` +
+    list.slice(0, 300).map(s => `<tr><td>${esc(s.name)}</td><td>${esc(s.grade)}</td><td>${esc(unitOf(s))}</td><td>${esc(teacherName(s.teacherEmail))}</td></tr>`).join("") +
+    (list.length > 300 ? `<tr><td colspan="4" class="hint">…and ${list.length - 300} more</td></tr>` : "");
+  const t = $("movTeacher").value;
+  $("movGo").disabled = !list.length || !t;
+  $("movGo").textContent = t ? `Move ${list.length} student${list.length === 1 ? "" : "s"} to ${teacherName(t)}` : "Choose the new homeroom teacher";
+}
+$("movOpen").onclick = () => {
+  $("stuForm").hidden = true; $("impPanel").hidden = true; $("movPanel").hidden = false;
+  $("movTeacher").innerHTML = `<option value="">Choose a teacher…</option>` + S.teachers.filter(t => t.active).map(t => `<option value="${esc(t.email)}">${esc(t.name)} (${esc(t.email)})</option>`).join("");
+  renderMove();
+};
+$("movClose").onclick = () => { $("movPanel").hidden = true; };
+$("movTeacher").onchange = renderMove;
+$("movGo").onclick = () => {
+  const ids = filteredStudents().map(s => s.id), t = $("movTeacher").value;
+  if (!ids.length || !t) return;
+  confirmClick($("movGo"), `Confirm: move ${ids.length} student${ids.length === 1 ? "" : "s"}`, async () => {
+    busy($("movGo"), true, "Moving…"); setSync("busy", "Saving");
+    const r = await API.call("student.move", { ids, teacherEmail: t });
+    busy($("movGo"), false);
+    if (!r.success) { setSync("err", "Not saved"); renderMove(); return toast(r.message); }
+    (r.data.students || []).forEach(st => { const k = S.students.findIndex(x => x.id === st.id); if (k > -1) S.students[k] = st; });
+    setSync("ok", "Saved"); cacheNow(); toast(r.message);
+    renderStep1();
+  });
 };
 
 /* ---------- step 1: time & location (preset options + own entry) ---------- */
@@ -364,7 +420,7 @@ function renderNotes() {
   $("notesTitle").textContent = st ? `Records for ${st.name}` : "Records";
   const c = notes.length, vals = uniq(notes.map(n => SUB[n.aspect].v)).length;
   $("noteCount").textContent = c ? `${c} record${c > 1 ? "s" : ""} · ${vals} of 5 values covered${c < 3 ? " · at least 3 recommended" : ""}` : "";
-  $("myNotes").innerHTML = c ? notes.map(n => noteHTML(n, true)).join("") : `<div class="empty" style="grid-column:1/-1">No records yet for this student. Write the first record above, or open <b>Examples</b> to see how records are written.</div>`;
+  $("myNotes").innerHTML = c ? notes.map(n => noteHTML(n, canEditRecord(n))).join("") : `<div class="empty" style="grid-column:1/-1">No records yet for this student. Write the first record above, or open <b>Examples</b> to see how records are written.</div>`;
   $("myNotes").querySelectorAll("[data-del]").forEach(b => b.onclick = () => confirmClick(b, "Confirm delete", async () => {
     setSync("busy", "Deleting");
     const r = await API.call("record.delete", { id: b.dataset.del });
@@ -372,7 +428,7 @@ function renderNotes() {
     S.records = S.records.filter(x => x.id !== b.dataset.del); setSync("ok", "Saved"); cacheNow(); renderNotes();
   }));
 }
-function renderStep1() { renderStudents(); renderNotes(); }
+function renderStep1() { renderStudents(); renderNotes(); if (!$("movPanel").hidden) renderMove(); }
 
 /* ---------- report saving (debounced) ---------- */
 let saveT = null, saving = Promise.resolve();
@@ -395,9 +451,13 @@ function renderDesk() {
   $("deskTitle").textContent = `Character description: ${first(st.name)}`;
   const k = notes.filter(n => n.type === "k").length, p = notes.length - k;
   $("evCount").textContent = notes.length ? `${k} strength${k !== 1 ? "s" : ""} · ${p} area${p !== 1 ? "s" : ""} for development` : "";
-  $("evList").innerHTML = notes.length ? notes.map(n => `<div class="evi"><span class="dot ${n.type}"></span><div><div class="d">${esc(sdate(n.date))} · ${esc(subLabel(n.aspect))}</div>${esc(n.what)}</div></div>`).join("")
+  $("evList").innerHTML = notes.length ? notes.map(n => `<div class="evi"><span class="dot ${n.type}"></span><div><div class="d">${esc(sdate(n.date))} · ${esc(subLabel(n.aspect))}${n.by && !API.LOCAL ? " · " + esc(n.by === S.me.email ? "you" : teacherName(n.by)) : ""}</div>${esc(n.what)}</div></div>`).join("")
     : `<div class="empty">No records yet. Return to <b>Step 1</b> to write anecdotal records.</div>`;
-  $("draft").disabled = !notes.length;
+  const ed = canEditStudent(st);
+  $("draft").disabled = !notes.length || !ed;
+  ["dS", "dW", "dG"].forEach(id => $(id).readOnly = !ed);
+  $("deskLock").hidden = ed;
+  if (!ed) $("deskLock").innerHTML = `<b>View only.</b> The character description of ${esc(st.name)} is written by the homeroom teacher, ${esc(teacherName(st.teacherEmail))}, or an administrator. Your anecdotal records are included automatically.`;
   $("dS").value = rep.strengths || ""; $("dW").value = rep.weaknesses || ""; $("dG").value = rep.recommendations || "";
   const warn = [];
   if (notes.length && !k) warn.push("There are no strengths recorded yet. Every student has strengths; observe again and record at least one.");
@@ -414,7 +474,7 @@ $("draft").onclick = () => {
 /* ---------- step 3 ---------- */
 const RF = [["rYear", "academicYear"], ["rSem", "semester"], ["rTerm", "term"], ["rPlace", "place"], ["rDate", "reportDate"], ["rSocial", "social"], ["rSpirit", "spiritual"]];
 RF.forEach(([id, k]) => $(id).addEventListener("input", e => { curReport()[k] = e.target.value; if (k === "place") pref.set("place", e.target.value); queueSave(); renderReport(); }));
-$("rTeacher").addEventListener("input", e => pref.set("teacher-name", e.target.value));
+$("rTeacher").addEventListener("input", e => { pref.set("teacher-name", e.target.value); if (S.cur) pref.set("teacher-name-" + S.cur, e.target.value); });
 $("narr").onclick = () => {
   const rep = curReport();
   const go = () => { const st = curStudent(), notes = curNotes(); rep.social = narrative(notes, st, "so"); rep.spiritual = narrative(notes, st, "sp"); renderRapor(); saveReport(); toast("Narratives drafted; please revise them"); };
@@ -422,15 +482,19 @@ $("narr").onclick = () => {
 };
 function renderRapor() {
   const rep = curReport();
-  RF.forEach(([id, k]) => $(id).value = rep[k] || "");
-  $("rTeacher").value = pref.get("teacher-name", S.me && S.me.email !== "demo" ? S.me.name : "");
-  $("narr").disabled = !curNotes().length;
+  const st = curStudent(), ed = canEditStudent(st);
+  RF.forEach(([id, k]) => { $(id).value = rep[k] || ""; $(id).readOnly = !ed; });
+  $("rDate").disabled = !ed;
+  $("rTeacher").value = pref.get("teacher-name-" + st.id, API.LOCAL ? pref.get("teacher-name", "") : teacherName(st.teacherEmail));
+  $("narr").disabled = !curNotes().length || !ed;
+  $("raporLock").hidden = ed;
+  if (!ed) $("raporLock").innerHTML = `<b>View only.</b> The report of ${esc(st.name)} is prepared by the homeroom teacher, ${esc(teacherName(st.teacherEmail))}, or an administrator. You can still view and download it.`;
   renderReport();
 }
 function currentData() { return reportData(curStudent(), curReport(), curNotes()); }
 function renderReport() {
   const d = currentData(), rep = curReport();
-  $("report").innerHTML = reportHTML(d, true);
+  $("report").innerHTML = reportHTML(d, canEditStudent(curStudent()));
   $("report").querySelectorAll(".cell").forEach(b => b.onclick = () => {
     const c = b.dataset.ch, l = b.dataset.lv;
     if (rep.grades[c] === l) delete rep.grades[c]; else rep.grades[c] = l;

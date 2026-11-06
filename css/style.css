@@ -217,8 +217,11 @@ img{max-width:100%}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
 
 /* ---------- student filters ---------- */
-.stufilters{display:grid;grid-template-columns:minmax(0,170px) minmax(0,150px) minmax(0,1fr);gap:12px;align-items:end}
-@media (max-width:640px){.stufilters{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.stufilters .grow{grid-column:1/-1}}
+.stufilters{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.stufilters>div{flex:0 1 170px;min-width:0}
+.stufilters>.grow{flex:1 1 280px}
+@media (max-width:640px){.stufilters>div{flex:1 1 40%}.stufilters>.grow{flex-basis:100%}}
+.note .by{font-family:var(--f-body);font-weight:700;color:var(--accent)}
 .stufilters .count{font-weight:400;margin-left:6px}
 
 /* ---------- time / location combo ---------- */
