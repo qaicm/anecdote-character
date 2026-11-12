@@ -70,8 +70,8 @@ function reportHTML(d, editable) {
   <tr><td class="k">Grade:</td><td>${esc(d.student.grade || "")}</td><td class="k">Term:</td><td>${esc(d.term)}</td></tr></table>
   <table class="rgrade"><tr><th rowspan="2">No</th><th rowspan="2">Character</th><th colspan="4">Grading</th></tr>
   <tr>${LEVELS.map(l => `<th>${l}</th>`).join("")}</tr>${rows}</table>
-  <div class="rnarr"><div class="h">Social</div><div class="t">${esc(d.social)}</div></div>
   <div class="rnarr"><div class="h">Spiritual</div><div class="t">${esc(d.spirit)}</div></div>
+  <div class="rnarr"><div class="h">Social</div><div class="t">${esc(d.social)}</div></div>
   <div class="rsign">${esc(d.place)}${d.place && d.date ? ", " : ""}${esc(longdate(d.date))}</div></div>`;
 }
 
@@ -86,7 +86,18 @@ function show(t) {
   if (t === "desk") renderDesk();
   if (t === "rapor") renderRapor();
   if (t === "admin") renderAdmin();
+  updateProgress();
   window.scrollTo({ top: 0 });
+}
+/* stepper: tick a step when the selected student has data for it */
+function updateProgress() {
+  const st = curStudent(), r = st ? S.reports.find(x => x.studentKey === S.cur) : null;
+  const done = {
+    catat: !!st && curNotes().length > 0,
+    desk: !!r && !!(r.strengths || r.weaknesses || r.recommendations),
+    rapor: !!r && !!(r.social || r.spiritual)
+  };
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("done", !!done[b.dataset.tab]));
 }
 document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => show(b.dataset.tab));
 document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => show(b.dataset.go));
@@ -416,7 +427,7 @@ $("addNote").onclick = async () => {
   S.records.push(r.data.record);
   rememberOwn("nTime"); rememberOwn("nLoc");
   ["nWhat", "nEnd"].forEach(id => $(id).value = ""); $("addMsg").textContent = "";
-  setSync("ok", "Saved"); cacheNow(); checkNote(); renderNotes(); toast("Record saved");
+  setSync("ok", "Saved"); cacheNow(); checkNote(); renderNotes(); updateProgress(); toast("Record saved");
 };
 function renderNotes() {
   const st = curStudent(), notes = curNotes();
@@ -428,16 +439,16 @@ function renderNotes() {
     setSync("busy", "Deleting");
     const r = await API.call("record.delete", { id: b.dataset.del });
     if (!r.success) { setSync("err", "Not deleted"); return toast(r.message); }
-    S.records = S.records.filter(x => x.id !== b.dataset.del); setSync("ok", "Saved"); cacheNow(); renderNotes();
+    S.records = S.records.filter(x => x.id !== b.dataset.del); setSync("ok", "Saved"); cacheNow(); renderNotes(); updateProgress();
   }));
 }
-function renderStep1() { renderStudents(); renderNotes(); if (!$("movPanel").hidden) renderMove(); }
+function renderStep1() { renderStudents(); renderNotes(); if (!$("movPanel").hidden) renderMove(); updateProgress(); }
 
 /* ---------- report saving (debounced) ---------- */
 let saveT = null, saving = Promise.resolve();
-function queueSave() { setSync("busy", "Unsaved changes"); clearTimeout(saveT); saveT = setTimeout(saveReport, 900); }
+function queueSave() { updateProgress(); setSync("busy", "Unsaved changes"); clearTimeout(saveT); saveT = setTimeout(saveReport, 900); }
 function saveReport() {
-  clearTimeout(saveT);
+  clearTimeout(saveT); updateProgress();
   const r = curReport(); if (!r) return Promise.resolve();
   const payload = { studentKey: r.studentKey, academicYear: r.academicYear, semester: r.semester, term: r.term, place: r.place, reportDate: r.reportDate, grades: r.grades, social: r.social, spiritual: r.spiritual, strengths: r.strengths, weaknesses: r.weaknesses, recommendations: r.recommendations };
   setSync("busy", "Saving");
@@ -539,7 +550,7 @@ function reportText(d) {
   return [`Student's Name: ${(d.student.name || "").toUpperCase()}\tAcademic Year: ${d.year}`, `Student's ID: ${d.student.studentId || ""}\tSemester: ${d.sem}`, `Grade: ${d.student.grade || ""}\tTerm: ${d.term}`, "",
     "No\tCharacter\t" + LEVELS.join("\t"),
     ...VALUES.map((v, i) => `${i + 1}\t${v.name}\t` + LEVELS.map(l => d.grades[v.id].level === l ? "V" : "").join("\t")),
-    "", "SOCIAL", d.social, "", "SPIRITUAL", d.spirit, "", `${d.place}, ${longdate(d.date)}`].join("\n");
+    "", "SPIRITUAL", d.spirit, "", "SOCIAL", d.social, "", `${d.place}, ${longdate(d.date)}`].join("\n");
 }
 function copyFallback(el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Text selected; press Ctrl+C to copy"); }
 $("copyRep").onclick = () => { navigator.clipboard.writeText(reportText(currentData())).then(() => toast("Report copied as text")).catch(() => copyFallback($("report"))); };
@@ -551,8 +562,8 @@ $("copyTable").onclick = () => {
   <tr><td colspan="2">Grade:</td><td colspan="2">${esc(d.student.grade || "")}</td><td>Term:</td><td>${esc(d.term)}</td></tr>
   <tr><th>No</th><th>Character</th>${LEVELS.map(l => `<th>${l}</th>`).join("")}</tr>
   ${VALUES.map((v, i) => `<tr><td>${i + 1}</td><td>${v.name}</td>${LEVELS.map(l => `<td align="center">${d.grades[v.id].level === l ? "V" : ""}</td>`).join("")}</tr>`).join("")}
-  <tr><th colspan="6" align="left">Social</th></tr><tr><td colspan="6">${esc(d.social)}</td></tr>
   <tr><th colspan="6" align="left">Spiritual</th></tr><tr><td colspan="6">${esc(d.spirit)}</td></tr>
+  <tr><th colspan="6" align="left">Social</th></tr><tr><td colspan="6">${esc(d.social)}</td></tr>
   <tr><td colspan="6" align="right">${esc(d.place)}, ${esc(longdate(d.date))}</td></tr></table>`;
   try {
     navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([reportText(d)], { type: "text/plain" }) })])

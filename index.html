@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Anecdote to Character</title>
 <meta name="description" content="Turn anecdotal records into character descriptions and character reports.">
+<meta name="theme-color" content="#6b4de6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -57,7 +58,7 @@
       <div class="step"><span class="k">Step 1</span><b>Choose one student</b><span class="hint">A student you would like to understand more deeply.</span></div>
       <div class="step"><span class="k">Step 1</span><b>Write anecdotal records</b><span class="hint">Date, time, location, what happened and how it ended, tagged with one sub-value. At least three records.</span></div>
       <div class="step"><span class="k">Step 2</span><b>Describe the character</b><span class="hint">Strengths, areas for development and recommendations, each supported by a record.</span></div>
-      <div class="step"><span class="k">Step 3</span><b>Produce the report</b><span class="hint">Grades for the five values, Social and Spiritual narratives, a quality check, and PDF or Word download.</span></div>
+      <div class="step"><span class="k">Step 3</span><b>Produce the report</b><span class="hint">Grades for the five values, Spiritual and Social narratives, a quality check, and PDF or Word download.</span></div>
     </div>
     <div class="exnav" id="exnav"></div>
     <div class="grid3">
@@ -208,10 +209,10 @@
     <div class="grid2">
       <div class="box" style="display:grid;gap:14px;align-content:start">
         <h2>Report narratives</h2>
-        <p class="hint">Narratives follow the pattern: strength, then <i>However</i> (area for development), then <i>Therefore</i> (recommendation). Faithful and Akhlaq-Adab records form the Spiritual narrative; Independence, Intelligence and Leadership records form the Social narrative.</p>
+        <p class="hint">Narratives follow the pattern: strength, then <i>However</i> (area for development), then <i>Therefore</i> (recommendation). The Spiritual narrative comes first and is formed from Faithful and Akhlaq-Adab records; the Social narrative is formed from Independence, Intelligence and Leadership records.</p>
         <div class="row"><button class="btn" id="narr">Draft narratives from records</button></div>
-        <div><label for="rSocial">Social</label><textarea id="rSocial" rows="7"></textarea></div>
         <div><label for="rSpirit">Spiritual</label><textarea id="rSpirit" rows="7"></textarea></div>
+        <div><label for="rSocial">Social</label><textarea id="rSocial" rows="7"></textarea></div>
       </div>
       <div class="box" style="display:grid;gap:12px;align-content:start">
         <div class="row between"><h2>Suggested improvements</h2><span class="count" id="ckCount"></span></div>
@@ -252,11 +253,10 @@
           <li><b>Inconsistent timing.</b> The report is dated 1 September, at the start of Semester 1, yet refers to <i>throughout the academic year</i>. Use <i>this term</i> instead.</li>
         </ol>
         <div class="ba">
-          <div class="col before"><span class="lab">Before · Social</span><p><mark>Akhmad</mark> Fakhry has been demonstrating responsibility <mark>throughout the academic year</mark>. He has been <mark>almost completing in assignments</mark> on time and has shown a keen awareness of his academic obligations. While <mark>Akhmad</mark> Fakhry has been a diligent student, he has been exhibiting a tendency to rely on conventional approaches to problem-solving. His creative thinking skills could be further developed. Therefore, he is encouraged to participate in <mark>activities that promote imaginative thinking</mark>.</p></div>
-          <div class="col after"><span class="lab">After · Social</span><p>Ahmad Fakhry has been demonstrating responsibility this term; he completed almost all assignments on time and is aware of his academic obligations. However, he still relies on familiar approaches to problem-solving, and his creative-innovative thinking can be developed further. He also needs frequent reminders to stay focused, which indicates that his self-control is still developing. Therefore, he is encouraged to take part in open-ended projects and brainstorming activities, and to use an agreed signal before speaking so that he can manage his impulses independently.</p></div>
           <div class="col before"><span class="lab">Before · Spiritual</span><p>Masyaallah, <mark>Akhmat</mark> has continued to demonstrate <mark>her</mark> empathy. <mark>She</mark> manages <mark>her</mark> emotions appropriately and positively responds to <mark>her</mark> friends during free play. However, <mark>Fulanah</mark> is still developing <mark>her</mark> self-control <mark>due she needs</mark> to be reminded about staying focused and avoiding distraction. Therefore, raising <mark>her</mark> hands and focusing on class will improve <mark>her</mark> self-control.</p></div>
           <div class="col after"><span class="lab">After · Spiritual</span><p>Masyaallah, Ahmad has continued to show genuine care for the feelings of his friends and responds to them courteously during free play. He performs his daily prayers consistently and expresses gratitude for the blessings he receives. To grow further, he is encouraged to lead the du'a in class occasionally so that he can become a role model in worship for his peers.</p></div>
-        </div>
+          <div class="col before"><span class="lab">Before · Social</span><p><mark>Akhmad</mark> Fakhry has been demonstrating responsibility <mark>throughout the academic year</mark>. He has been <mark>almost completing in assignments</mark> on time and has shown a keen awareness of his academic obligations. While <mark>Akhmad</mark> Fakhry has been a diligent student, he has been exhibiting a tendency to rely on conventional approaches to problem-solving. His creative thinking skills could be further developed. Therefore, he is encouraged to participate in <mark>activities that promote imaginative thinking</mark>.</p></div>
+          <div class="col after"><span class="lab">After · Social</span><p>Ahmad Fakhry has been demonstrating responsibility this term; he completed almost all assignments on time and is aware of his academic obligations. However, he still relies on familiar approaches to problem-solving, and his creative-innovative thinking can be developed further. He also needs frequent reminders to stay focused, which indicates that his self-control is still developing. Therefore, he is encouraged to take part in open-ended projects and brainstorming activities, and to use an agreed signal before speaking so that he can manage his impulses independently.</p></div></div>
       </div>
     </details>
   </section>
